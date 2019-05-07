@@ -21,7 +21,6 @@ import java.util.Map;
 /**
  * The model class of an instance of a service, which is used for service registration and discovery.
  * <p>
- * The inspiration comes from <a href="https://spring.io/projects/spring-cloud-commons">Spring Cloud Commons</a>.
  *
  * @since 2.7.2
  */
@@ -75,4 +74,14 @@ public interface ServiceInstance {
      */
     Map<String, String> getMetadata();
 
+    /**
+     * @return the hash code of current instance.
+     */
+    int hashCode();
+
+    /**
+     * @param another another {@link ServiceInstance}
+     * @return if equals , return <code>true</code>, or <code>false</code>
+     */
+    boolean equals(Object another);
 }
