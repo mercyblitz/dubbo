@@ -20,14 +20,12 @@ import org.apache.dubbo.qos.command.BaseCommand;
 import org.apache.dubbo.qos.command.CommandContext;
 import org.apache.dubbo.qos.command.annotation.Cmd;
 import org.apache.dubbo.qos.textui.TTable;
+import org.apache.dubbo.rpc.cluster.support.AbstractClusterInvoker;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 import org.apache.dubbo.rpc.model.ConsumerModel;
 import org.apache.dubbo.rpc.model.ProviderModel;
 
 import java.util.Collection;
-
-import static org.apache.dubbo.registry.support.ProviderConsumerRegTable.getConsumerAddressNum;
-import static org.apache.dubbo.registry.support.ProviderConsumerRegTable.isRegistered;
 
 @Cmd(name = "ls", summary = "ls service", example = {
         "ls"
@@ -57,7 +55,7 @@ public class Ls implements BaseCommand {
 
         //Content
         for (ProviderModel providerModel : ProviderModelList) {
-            tTable.addRow(providerModel.getServiceName(), isRegistered(providerModel.getServiceName()) ? "Y" : "N");
+            tTable.addRow(providerModel.getServiceName(), ApplicationModel.getDefaultApplicationModel().isRegistered(providerModel.getServiceName()) ? "Y" : "N");
         }
         stringBuilder.append(tTable.rendering());
 
@@ -78,9 +76,10 @@ public class Ls implements BaseCommand {
         tTable.addRow("Consumer Service Name", "NUM");
 
         //Content
-        //TODO to calculate consumerAddressNum
+        //TODO to support multi registry
         for (ConsumerModel consumerModel : consumerModelList) {
-            tTable.addRow(consumerModel.getServiceName(), getConsumerAddressNum(consumerModel.getServiceName()));
+            AbstractClusterInvoker clusterInvoker = (AbstractClusterInvoker) consumerModel.getInvoker();
+            tTable.addRow(consumerModel.getServiceName(), clusterInvoker.getDirectory().getAllInvokers().size());
         }
 
         stringBuilder.append(tTable.rendering());

@@ -240,9 +240,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     private void refreshInvoker(List<URL> invokerUrls) {
         Assert.notNull(invokerUrls, "invokerUrls should not be null");
 
-        if (invokerUrls.size() == 1
-                && invokerUrls.get(0) != null
-                && Constants.EMPTY_PROTOCOL.equals(invokerUrls.get(0).getProtocol())) {
+        if (UrlUtils.isEmptyProtocol(invokerUrls)) {
             this.forbidden = true; // Forbid to access
             this.invokers = Collections.emptyList();
             routerChain.setInvokers(this.invokers);
@@ -587,6 +585,11 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     @Override
     public Class<T> getInterface() {
         return serviceType;
+    }
+
+    @Override
+    public List<Invoker<T>> getAllInvokers() {
+        return invokers;
     }
 
     @Override

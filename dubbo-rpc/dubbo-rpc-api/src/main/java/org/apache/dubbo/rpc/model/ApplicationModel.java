@@ -16,10 +16,15 @@
  */
 package org.apache.dubbo.rpc.model;
 
+import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
+import org.apache.dubbo.rpc.Invoker;
+import org.apache.dubbo.rpc.model.invoker.ProviderInvokerWrapper;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -36,58 +41,150 @@ public class ApplicationModel {
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(ApplicationModel.class);
 
-    /**
-     * full qualified class name -> provided service
-     */
-    private static final ConcurrentMap<String, ProviderModel> PROVIDED_SERVICES = new ConcurrentHashMap<>();
-    /**
-     * full qualified class name -> subscribe service
-     */
-    private static final ConcurrentMap<String, ConsumerModel> CONSUMED_SERVICES = new ConcurrentHashMap<>();
-
-    private static String application;
+    private static final String DEFAULT_APPLICATION = "default";
 
     public static Collection<ConsumerModel> allConsumerModels() {
-        return CONSUMED_SERVICES.values();
+        return getDefaultApplicationModel().getConsumerModels();
     }
 
     public static Collection<ProviderModel> allProviderModels() {
-        return PROVIDED_SERVICES.values();
+        return getDefaultApplicationModel().getProviderModels();
     }
 
     public static ProviderModel getProviderModel(String serviceName) {
-        return PROVIDED_SERVICES.get(serviceName);
+        return getDefaultApplicationModel().providerModel(serviceName);
     }
 
     public static ConsumerModel getConsumerModel(String serviceName) {
-        return CONSUMED_SERVICES.get(serviceName);
+        return getDefaultApplicationModel().consumerModel(serviceName);
     }
 
     public static void initConsumerModel(String serviceName, ConsumerModel consumerModel) {
-        if (CONSUMED_SERVICES.putIfAbsent(serviceName, consumerModel) != null) {
-            LOGGER.warn("Already register the same consumer:" + serviceName);
-        }
+        getDefaultApplicationModel().addConsumerModel(serviceName, consumerModel);
     }
 
     public static void initProviderModel(String serviceName, ProviderModel providerModel) {
-        if (PROVIDED_SERVICES.putIfAbsent(serviceName, providerModel) != null) {
-            LOGGER.warn("Already register the same:" + serviceName);
-        }
+        getDefaultApplicationModel().addProviderModel(serviceName, providerModel);
     }
 
     public static String getApplication() {
-        return application;
+        return getDefaultApplicationModel().getName();
     }
 
     public static void setApplication(String application) {
-        ApplicationModel.application = application;
+        getDefaultApplicationModel().setName(application);
+    }
+
+//    private DubboServer server;
+
+    private static Map<String, ApplicationModel> applications = new ConcurrentHashMap<>();
+
+    /**
+     * full qualified class name -> provided service
+     */
+    private final ConcurrentMap<String, ProviderModel> providedServices = new ConcurrentHashMap<>();
+    /**
+     * full qualified class name -> subscribe service
+     */
+    private final ConcurrentMap<String, ConsumerModel> consumedServices = new ConcurrentHashMap<>();
+
+    private String name;
+
+    public ApplicationModel() {
+    }
+
+    public static ApplicationModel getApplicationModel(String app) {
+        return applications.get(app);
+    }
+
+    public static ApplicationModel getDefaultApplicationModel() {
+        // TODO what should a default ApplicationModel like?
+        return applications.computeIfAbsent(DEFAULT_APPLICATION, (key) -> new ApplicationModel());
+    }
+
+//    public DubboServer getServer() {
+//        return server;
+//    }
+//
+//    public void addServer(DubboServer server) {
+//        this.server = server;
+//    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Collection<ConsumerModel> getConsumerModels() {
+        return consumedServices.values();
+    }
+
+    public Collection<ProviderModel> getProviderModels() {
+        return providedServices.values();
+    }
+
+    public ProviderModel providerModel(String serviceKey) {
+        return providedServices.get(serviceKey);
+    }
+
+    public ConsumerModel consumerModel(String serviceKey) {
+        return consumedServices.get(serviceKey);
+    }
+
+    public void addConsumerModel(String serviceKey, ConsumerModel consumerModel) {
+        if (consumedServices.putIfAbsent(serviceKey, consumerModel) != null) {
+            LOGGER.warn("Already register the same consumer:" + serviceKey);
+        }
+    }
+
+    public void addProviderModel(String serviceKey, ProviderModel providerModel) {
+        if (providedServices.putIfAbsent(serviceKey, providerModel) != null) {
+            LOGGER.warn("Already register the same:" + serviceKey);
+        }
     }
 
     /**
      * For unit test
      */
-    public static void reset() {
-        PROVIDED_SERVICES.clear();
-        CONSUMED_SERVICES.clear();
+    public void reset() {
+        providedServices.clear();
+        consumedServices.clear();
+    }
+
+
+    public <T> ProviderInvokerWrapper<T> registerProviderInvoker(Invoker<T> invoker, URL registryUrl, URL providerUrl) {
+        ProviderInvokerWrapper<T> wrapperInvoker = new ProviderInvokerWrapper<>(invoker, registryUrl, providerUrl);
+        ProviderModel providerModel = this.providerModel(providerUrl.getServiceKey());
+        providerModel.addInvoker(wrapperInvoker);
+        return wrapperInvoker;
+    }
+
+    public Collection<ProviderInvokerWrapper> getProviderInvokers(String serviceKey) {
+        ProviderModel providerModel = this.providerModel(serviceKey);
+        if (providerModel == null) {
+            return Collections.emptySet();
+        }
+        return providerModel.getInvokers();
+    }
+
+    public <T> ProviderInvokerWrapper<T> getProviderInvoker(String serviceKey, Invoker<T> invoker) {
+        ProviderModel providerModel = this.providerModel(serviceKey);
+        return providerModel.getInvoker(invoker.getUrl().getProtocol());
+    }
+
+    public boolean isRegistered(String serviceKey) {
+        return getProviderInvokers(serviceKey).stream().anyMatch(ProviderInvokerWrapper::isReg);
+    }
+
+    public void registerConsumerInvoker(Invoker invoker, String serviceKey) {
+        ConsumerModel consumerModel = this.consumerModel(serviceKey);
+        consumerModel.setInvoker(invoker);
+    }
+
+    public <T> Invoker<T> getConsumerInvoker(String serviceKey) {
+        return (Invoker<T>) this.consumerModel(serviceKey).getInvoker();
     }
 }

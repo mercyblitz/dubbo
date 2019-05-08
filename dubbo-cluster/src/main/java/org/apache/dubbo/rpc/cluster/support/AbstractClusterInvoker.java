@@ -95,6 +95,10 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         }
     }
 
+    public Directory<T> getDirectory() {
+        return directory;
+    }
+
     /**
      * Select a invoker using loadbalance policy.</br>
      * a) Firstly, select an invoker using loadbalance. If this invoker is in previously selected list, or,

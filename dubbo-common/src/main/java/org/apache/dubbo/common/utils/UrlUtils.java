@@ -494,4 +494,10 @@ public class UrlUtils {
             return "*".equals(pattern) || pattern.equals(value);
         }
     }
+
+    public static boolean isEmptyProtocol(List<URL> urls) {
+        return urls.size() == 1
+                && urls.get(0) != null
+                && Constants.EMPTY_PROTOCOL.equals(urls.get(0).getProtocol());
+    }
 }

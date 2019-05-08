@@ -17,6 +17,7 @@
 package org.apache.dubbo.rpc.model;
 
 import org.apache.dubbo.common.utils.Assert;
+import org.apache.dubbo.rpc.Invoker;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ public class ConsumerModel {
     private final Object proxyObject;
     private final String serviceName;
     private final Class<?> serviceInterfaceClass;
+    private Invoker<?> invoker;
 
     private final Map<Method, ConsumerMethodModel> methodModels = new IdentityHashMap<Method, ConsumerMethodModel>();
 
@@ -62,6 +64,14 @@ public class ConsumerModel {
         for (Method method : methods) {
             methodModels.put(method, new ConsumerMethodModel(method, attributes));
         }
+    }
+
+    public Invoker<?> getInvoker() {
+        return invoker;
+    }
+
+    public void setInvoker(Invoker<?> invoker) {
+        this.invoker = invoker;
     }
 
     /**

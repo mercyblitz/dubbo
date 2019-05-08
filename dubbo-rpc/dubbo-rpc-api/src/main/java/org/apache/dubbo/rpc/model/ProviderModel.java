@@ -16,9 +16,14 @@
  */
 package org.apache.dubbo.rpc.model;
 
+import org.apache.dubbo.common.URL;
+import org.apache.dubbo.rpc.model.invoker.ProviderInvokerWrapper;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +36,8 @@ public class ProviderModel {
     private final Object serviceInstance;
     private final Class<?> serviceInterfaceClass;
     private final Map<String, List<ProviderMethodModel>> methods = new HashMap<String, List<ProviderMethodModel>>();
+    private Map<String, ProviderInvokerWrapper> protocolInvokers;
+    private URL exportedUrl;
 
     public ProviderModel(String serviceName, Object serviceInstance, Class<?> serviceInterfaceClass) {
         if (null == serviceInstance) {
@@ -44,6 +51,26 @@ public class ProviderModel {
         initMethod();
     }
 
+    public void registerUrl(URL url) {
+        this.exportedUrl = url;
+    }
+
+    public void unRegisterUrl(URL url) {
+        // TODO, unregister doesn't mean has to delete.
+        this.exportedUrl = null;
+    }
+
+    public void addInvoker(ProviderInvokerWrapper invoker) {
+        protocolInvokers.put(invoker.getUrl().getProtocol(), invoker);
+    }
+
+    public ProviderInvokerWrapper getInvoker(String protocol) {
+        return protocolInvokers.get(protocol);
+    }
+
+    public Collection<ProviderInvokerWrapper> getInvokers() {
+        return Collections.unmodifiableCollection(protocolInvokers.values());
+    }
 
     public String getServiceName() {
         return serviceName;
