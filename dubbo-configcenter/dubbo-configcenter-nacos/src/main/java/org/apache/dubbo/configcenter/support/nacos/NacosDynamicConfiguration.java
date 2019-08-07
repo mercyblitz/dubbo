@@ -18,13 +18,13 @@
 package org.apache.dubbo.configcenter.support.nacos;
 
 import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.config.configcenter.ConfigChangeEvent;
+import org.apache.dubbo.common.config.configcenter.ConfigChangeType;
+import org.apache.dubbo.common.config.configcenter.ConfigurationListener;
+import org.apache.dubbo.common.config.configcenter.DynamicConfiguration;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.StringUtils;
-import org.apache.dubbo.configcenter.ConfigChangeEvent;
-import org.apache.dubbo.configcenter.ConfigChangeType;
-import org.apache.dubbo.configcenter.ConfigurationListener;
-import org.apache.dubbo.configcenter.DynamicConfiguration;
 
 import com.alibaba.nacos.api.NacosFactory;
 import com.alibaba.nacos.api.config.ConfigService;
@@ -46,6 +46,7 @@ import static com.alibaba.nacos.api.PropertyKeyConst.NAMESPACE;
 import static com.alibaba.nacos.api.PropertyKeyConst.SECRET_KEY;
 import static com.alibaba.nacos.api.PropertyKeyConst.SERVER_ADDR;
 import static com.alibaba.nacos.client.naming.utils.UtilAndComs.NACOS_NAMING_LOG_NAME;
+import static org.apache.dubbo.common.constants.CommonConstants.GROUP_CHAR_SEPERATOR;
 import static org.apache.dubbo.common.constants.RemotingConstants.BACKUP_KEY;
 
 /**
@@ -86,6 +87,31 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
             throw new IllegalStateException(e);
         }
         return configService;
+    }
+
+    public void publishNacosConfig(String key, String value) {
+        String[] keyAndGroup = getKeyAndGroup(key);
+        publishConfig(keyAndGroup[0], keyAndGroup[1], value);
+    }
+
+    @Override
+    public boolean publishConfig(String key, String group, String content) {
+        boolean published = false;
+        try {
+            published = configService.publishConfig(key, group, content);
+        } catch (NacosException e) {
+            logger.error(e.getErrMsg());
+        }
+        return published;
+    }
+
+    private String[] getKeyAndGroup(String key) {
+        int i = key.lastIndexOf(GROUP_CHAR_SEPERATOR);
+        if (i < 0) {
+            return new String[]{key, null};
+        } else {
+            return new String[]{key.substring(0, i), key.substring(i + 1)};
+        }
     }
 
     private Properties buildNacosProperties(URL url) {
@@ -159,7 +185,7 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
     }
 
     @Override
-    public String getRule(String key, String group, long timeout) throws IllegalStateException {
+    public String getConfig(String key, String group, long timeout) throws IllegalStateException {
         try {
             long nacosTimeout = timeout < 0 ?  DEFAULT_TIMEOUT : timeout;
             if (StringUtils.isEmpty(group)) {
@@ -173,8 +199,8 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
     }
 
     @Override
-    public String getProperties(String key, String group, long timeout) throws IllegalStateException {
-        return getRule(key, group, timeout);
+    public String getConfigs(String key, String group, long timeout) throws IllegalStateException {
+        return getConfig(key, group, timeout);
     }
 
     @Override

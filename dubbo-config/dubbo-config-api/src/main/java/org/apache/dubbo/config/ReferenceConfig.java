@@ -27,8 +27,12 @@ import org.apache.dubbo.common.utils.NetUtils;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.config.annotation.Reference;
 import org.apache.dubbo.config.context.ConfigManager;
+import org.apache.dubbo.config.event.ReferenceConfigDestroyedEvent;
+import org.apache.dubbo.config.event.ReferenceConfigInitializedEvent;
 import org.apache.dubbo.config.support.Parameter;
-import org.apache.dubbo.metadata.integration.MetadataReportService;
+import org.apache.dubbo.event.Event;
+import org.apache.dubbo.event.EventDispatcher;
+import org.apache.dubbo.metadata.WritableMetadataService;
 import org.apache.dubbo.remoting.Constants;
 import org.apache.dubbo.rpc.Invoker;
 import org.apache.dubbo.rpc.Protocol;
@@ -56,24 +60,26 @@ import java.util.Map;
 import java.util.Properties;
 
 import static org.apache.dubbo.common.constants.CommonConstants.ANY_VALUE;
+import static org.apache.dubbo.common.constants.CommonConstants.CLUSTER_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.COMMA_SEPARATOR;
 import static org.apache.dubbo.common.constants.CommonConstants.CONSUMER_SIDE;
 import static org.apache.dubbo.common.constants.CommonConstants.DUBBO;
 import static org.apache.dubbo.common.constants.CommonConstants.INTERFACE_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.LOCALHOST_VALUE;
+import static org.apache.dubbo.common.constants.CommonConstants.METADATA_DEFAULT;
+import static org.apache.dubbo.common.constants.CommonConstants.METADATA_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.METHODS_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.MONITOR_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.REVISION_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.SEMICOLON_SPLIT_PATTERN;
 import static org.apache.dubbo.common.constants.CommonConstants.SIDE_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.CLUSTER_KEY;
-import static org.apache.dubbo.config.Constants.DUBBO_IP_TO_REGISTRY;
-import static org.apache.dubbo.rpc.cluster.Constants.REFER_KEY;
-import static org.apache.dubbo.registry.Constants.REGISTER_IP_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.MONITOR_KEY;
-import static org.apache.dubbo.registry.Constants.CONSUMER_PROTOCOL;
 import static org.apache.dubbo.common.constants.RegistryConstants.REGISTRY_PROTOCOL;
-import static org.apache.dubbo.rpc.Constants.LOCAL_PROTOCOL;
 import static org.apache.dubbo.common.utils.NetUtils.isInvalidLocalHost;
+import static org.apache.dubbo.config.Constants.DUBBO_IP_TO_REGISTRY;
+import static org.apache.dubbo.registry.Constants.CONSUMER_PROTOCOL;
+import static org.apache.dubbo.registry.Constants.REGISTER_IP_KEY;
+import static org.apache.dubbo.rpc.Constants.LOCAL_PROTOCOL;
+import static org.apache.dubbo.rpc.cluster.Constants.REFER_KEY;
 
 /**
  * ReferenceConfig
@@ -172,6 +178,13 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
      */
     private transient volatile boolean destroyed;
 
+    /**
+     * The {@link EventDispatcher}
+     *
+     * @since 2.7.4
+     */
+    private final EventDispatcher eventDispatcher = EventDispatcher.getDefaultExtension();
+
     @SuppressWarnings("unused")
     private final Object finalizerGuardian = new Object() {
         @Override
@@ -217,7 +230,6 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             throw new IllegalStateException("<dubbo:reference interface=\"\" /> interface not allow null!");
         }
         completeCompoundConfigs();
-        startConfigCenter();
         // get consumer's global configuration
         checkDefault();
         this.refresh();
@@ -267,6 +279,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         }
         invoker = null;
         ref = null;
+
+        // dispatch a ReferenceConfigDestroyedEvent since 2.7.4
+        dispatch(new ReferenceConfigDestroyedEvent(this));
     }
 
     private void init() {
@@ -326,11 +341,15 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         }
         map.put(REGISTER_IP_KEY, hostToRegistry);
 
-        ref = createProxy(map);
-
         String serviceKey = URL.buildKey(interfaceName, group, version);
         ApplicationModel.initConsumerModel(serviceKey, buildConsumerModel(serviceKey, attributes));
+        ref = createProxy(map);
+        ApplicationModel.getConsumerModel(serviceKey).setProxyObject(ref);
+
         initialized = true;
+
+        // dispatch a ReferenceConfigInitializedEvent since 2.7.4
+        dispatch(new ReferenceConfigInitializedEvent(this, invoker));
     }
 
     private ConsumerModel buildConsumerModel(String serviceKey, Map<String, Object> attributes) {
@@ -374,7 +393,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
             } else { // assemble URL from register center's configuration
                 // if protocols not injvm checkRegistry
-                if (!LOCAL_PROTOCOL.equalsIgnoreCase(getProtocol())){
+                if (!LOCAL_PROTOCOL.equalsIgnoreCase(getProtocol())) {
                     checkRegistry();
                     List<URL> us = loadRegistries(false);
                     if (CollectionUtils.isNotEmpty(us)) {
@@ -424,10 +443,11 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
          * @since 2.7.0
          * ServiceData Store
          */
-        MetadataReportService metadataReportService = null;
-        if ((metadataReportService = getMetadataReportService()) != null) {
+        String metadata = map.get(METADATA_KEY);
+        WritableMetadataService metadataService = WritableMetadataService.getExtension(metadata == null ? METADATA_DEFAULT : metadata);
+        if (metadataService != null) {
             URL consumerURL = new URL(CONSUMER_PROTOCOL, map.remove(REGISTER_IP_KEY), 0, map.get(INTERFACE_KEY), map);
-            metadataReportService.publishConsumer(consumerURL);
+            metadataService.publishServiceDefinition(consumerURL);
         }
         // create service proxy
         return (T) PROXY_FACTORY.getProxy(invoker);
@@ -660,5 +680,15 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
             }
         }
+    }
+
+    /**
+     * Dispatch an {@link Event event}
+     *
+     * @param event an {@link Event event}
+     * @since 2.7.4
+     */
+    protected void dispatch(Event event) {
+        eventDispatcher.dispatch(event);
     }
 }

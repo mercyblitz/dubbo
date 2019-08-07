@@ -17,28 +17,37 @@
 package org.apache.dubbo.configcenter.support.zookeeper;
 
 import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.config.configcenter.ConfigurationListener;
+import org.apache.dubbo.common.config.configcenter.DynamicConfiguration;
 import org.apache.dubbo.common.utils.NamedThreadFactory;
 import org.apache.dubbo.common.utils.StringUtils;
-import org.apache.dubbo.configcenter.ConfigurationListener;
-import org.apache.dubbo.configcenter.DynamicConfiguration;
 import org.apache.dubbo.remoting.zookeeper.ZookeeperClient;
 import org.apache.dubbo.remoting.zookeeper.ZookeeperTransporter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static java.util.Collections.emptySortedSet;
+import static java.util.Collections.unmodifiableSortedSet;
+import static org.apache.dubbo.common.config.configcenter.Constants.CONFIG_NAMESPACE_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.PATH_SEPARATOR;
-import static org.apache.dubbo.configcenter.Constants.CONFIG_NAMESPACE_KEY;
+import static org.apache.dubbo.common.utils.CollectionUtils.isEmpty;
 
 /**
  *
  */
 public class ZookeeperDynamicConfiguration implements DynamicConfiguration {
+
+    private static final String EMPTY_STRING = "";
+
     private static final Logger logger = LoggerFactory.getLogger(ZookeeperDynamicConfiguration.class);
 
     private Executor executor;
@@ -88,29 +97,56 @@ public class ZookeeperDynamicConfiguration implements DynamicConfiguration {
      */
     @Override
     public void addListener(String key, String group, ConfigurationListener listener) {
-        cacheListener.addListener(getPathKey(group, key), listener);
+        cacheListener.addListener(getKeyPath(group, key), listener);
     }
 
     @Override
     public void removeListener(String key, String group, ConfigurationListener listener) {
-        cacheListener.removeListener(getPathKey(group, key), listener);
+        cacheListener.removeListener(getKeyPath(group, key), listener);
     }
 
     @Override
-    public String getRule(String key, String group, long timeout) throws IllegalStateException {
-        return (String) getInternalProperty(getPathKey(group, key));
+    public String getConfig(String key, String group, long timeout) throws IllegalStateException {
+        return (String) getInternalProperty(getKeyPath(group, key));
+    }
+
+    /**
+     * For zookeeper, {@link #getConfig(String, String, long)} and {@link #getConfigs(String, String, long)} have the same meaning.
+     *
+     * @param key
+     * @param group
+     * @param timeout
+     * @return
+     * @throws IllegalStateException
+     */
+    @Override
+    public String getConfigs(String key, String group, long timeout) throws IllegalStateException {
+        return getConfig(key, group, timeout);
     }
 
     @Override
-    public String getProperties(String key, String group, long timeout) throws IllegalStateException {
-        // use global group 'dubbo' if no group specified
-        if (StringUtils.isEmpty(group)) {
-            group = DEFAULT_GROUP;
+    public boolean publishConfig(String key, String group, String content) {
+        String path = getKeyPath(group, key);
+        zkClient.create(path, content, true);
+        return true;
+    }
+
+    @Override
+    public SortedSet<String> getConfigKeys(String group) {
+        String path = getGroupPath(group);
+        List<String> nodes = zkClient.getChildren(path);
+        return isEmpty(nodes) ? emptySortedSet() : unmodifiableSortedSet(new TreeSet<>(nodes));
+    }
+
+    private String getKeyPath(String group, String key) {
+        return getGroupPath(group) + PATH_SEPARATOR + key;
+    }
+
+    private String getGroupPath(String group) {
+        String actualGroup = group;
+        if (StringUtils.isEmpty(actualGroup)) {
+            actualGroup = DEFAULT_GROUP;
         }
-        return (String) getInternalProperty(getPathKey(group, key));
-    }
-
-    private String getPathKey(String group, String key) {
-        return rootPath + PATH_SEPARATOR + group + PATH_SEPARATOR + key;
+        return rootPath + PATH_SEPARATOR + actualGroup;
     }
 }

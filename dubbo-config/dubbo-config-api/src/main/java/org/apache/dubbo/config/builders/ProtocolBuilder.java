@@ -185,6 +185,14 @@ public class ProtocolBuilder extends AbstractBuilder<ProtocolConfig, ProtocolBui
      */
     private Boolean isDefault;
 
+    public static ProtocolBuilder newBuilder() {
+        return new ProtocolBuilder();
+    }
+
+    public ProtocolBuilder id(String id) {
+        return super.id(id);
+    }
+
     public ProtocolBuilder name(String name) {
         this.name = name;
         return getThis();
@@ -206,9 +214,9 @@ public class ProtocolBuilder extends AbstractBuilder<ProtocolConfig, ProtocolBui
     }
 
     /**
-     * @see org.apache.dubbo.config.builders.ProtocolBuilder#contextpath(String)
      * @param path
      * @return ProtocolBuilder
+     * @see org.apache.dubbo.config.builders.ProtocolBuilder#contextpath(String)
      */
     @Deprecated
     public ProtocolBuilder path(String path) {
@@ -297,9 +305,9 @@ public class ProtocolBuilder extends AbstractBuilder<ProtocolConfig, ProtocolBui
     }
 
     /**
-     * @see org.apache.dubbo.config.builders.ProtocolBuilder#dispatcher(String)
      * @param dispather
      * @return ProtocolBuilder
+     * @see org.apache.dubbo.config.builders.ProtocolBuilder#dispatcher(String)
      */
     @Deprecated
     public ProtocolBuilder dispather(String dispather) {

@@ -20,7 +20,6 @@ import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.URLBuilder;
 import org.apache.dubbo.common.Version;
 import org.apache.dubbo.common.bytecode.Wrapper;
-import org.apache.dubbo.common.config.Environment;
 import org.apache.dubbo.common.extension.ExtensionLoader;
 import org.apache.dubbo.common.utils.ClassUtils;
 import org.apache.dubbo.common.utils.CollectionUtils;
@@ -29,9 +28,13 @@ import org.apache.dubbo.common.utils.NamedThreadFactory;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.config.annotation.Service;
 import org.apache.dubbo.config.context.ConfigManager;
+import org.apache.dubbo.config.event.ServiceConfigExportedEvent;
+import org.apache.dubbo.config.event.ServiceConfigUnexportedEvent;
 import org.apache.dubbo.config.invoker.DelegateProviderMetaDataInvoker;
 import org.apache.dubbo.config.support.Parameter;
-import org.apache.dubbo.metadata.integration.MetadataReportService;
+import org.apache.dubbo.event.Event;
+import org.apache.dubbo.event.EventDispatcher;
+import org.apache.dubbo.metadata.WritableMetadataService;
 import org.apache.dubbo.remoting.Constants;
 import org.apache.dubbo.rpc.Exporter;
 import org.apache.dubbo.rpc.Invoker;
@@ -65,33 +68,34 @@ import static org.apache.dubbo.common.constants.CommonConstants.ANYHOST_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.ANY_VALUE;
 import static org.apache.dubbo.common.constants.CommonConstants.COMMA_SPLIT_PATTERN;
 import static org.apache.dubbo.common.constants.CommonConstants.DUBBO;
+import static org.apache.dubbo.common.constants.CommonConstants.DUBBO_IP_TO_BIND;
 import static org.apache.dubbo.common.constants.CommonConstants.LOCALHOST_VALUE;
+import static org.apache.dubbo.common.constants.CommonConstants.METADATA_DEFAULT;
+import static org.apache.dubbo.common.constants.CommonConstants.METADATA_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.METHODS_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.MONITOR_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.PATH_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.PROVIDER_SIDE;
 import static org.apache.dubbo.common.constants.CommonConstants.REVISION_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.SIDE_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.DUBBO_IP_TO_BIND;
-import static org.apache.dubbo.config.Constants.DUBBO_IP_TO_REGISTRY;
-import static org.apache.dubbo.config.Constants.DUBBO_PORT_TO_BIND;
-import static org.apache.dubbo.config.Constants.DUBBO_PORT_TO_REGISTRY;
-import static org.apache.dubbo.rpc.cluster.Constants.EXPORT_KEY;
-import static org.apache.dubbo.config.Constants.MULTICAST;
-import static org.apache.dubbo.config.Constants.PROTOCOLS_SUFFIX;
-import static org.apache.dubbo.rpc.Constants.SCOPE_KEY;
-import static org.apache.dubbo.rpc.Constants.SCOPE_LOCAL;
-import static org.apache.dubbo.config.Constants.SCOPE_NONE;
-import static org.apache.dubbo.rpc.Constants.SCOPE_REMOTE;
-import static org.apache.dubbo.common.constants.CommonConstants.MONITOR_KEY;
 import static org.apache.dubbo.common.constants.RegistryConstants.DYNAMIC_KEY;
-import static org.apache.dubbo.rpc.Constants.GENERIC_KEY;
-import static org.apache.dubbo.rpc.Constants.LOCAL_PROTOCOL;
-import static org.apache.dubbo.rpc.Constants.PROXY_KEY;
-import static org.apache.dubbo.rpc.Constants.TOKEN_KEY;
 import static org.apache.dubbo.common.utils.NetUtils.getAvailablePort;
 import static org.apache.dubbo.common.utils.NetUtils.getLocalHost;
 import static org.apache.dubbo.common.utils.NetUtils.isInvalidLocalHost;
 import static org.apache.dubbo.common.utils.NetUtils.isInvalidPort;
+import static org.apache.dubbo.config.Constants.DUBBO_IP_TO_REGISTRY;
+import static org.apache.dubbo.config.Constants.DUBBO_PORT_TO_BIND;
+import static org.apache.dubbo.config.Constants.DUBBO_PORT_TO_REGISTRY;
+import static org.apache.dubbo.config.Constants.MULTICAST;
+import static org.apache.dubbo.config.Constants.SCOPE_NONE;
+import static org.apache.dubbo.rpc.Constants.GENERIC_KEY;
+import static org.apache.dubbo.rpc.Constants.LOCAL_PROTOCOL;
+import static org.apache.dubbo.rpc.Constants.PROXY_KEY;
+import static org.apache.dubbo.rpc.Constants.SCOPE_KEY;
+import static org.apache.dubbo.rpc.Constants.SCOPE_LOCAL;
+import static org.apache.dubbo.rpc.Constants.SCOPE_REMOTE;
+import static org.apache.dubbo.rpc.Constants.TOKEN_KEY;
+import static org.apache.dubbo.rpc.cluster.Constants.EXPORT_KEY;
 
 /**
  * ServiceConfig
@@ -194,6 +198,12 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
      */
     private volatile String generic;
 
+    /**
+     * @since 2.7.4
+     */
+    private final EventDispatcher eventDispatcher = EventDispatcher.getDefaultExtension();
+
+
     public ServiceConfig() {
     }
 
@@ -290,10 +300,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     public void checkAndUpdateSubConfigs() {
-        // Use default configs defined explicitly on global configs
+        // Use default configs defined explicitly on global scope
         completeCompoundConfigs();
-        // Config Center should always being started first.
-        startConfigCenter();
         checkDefault();
         checkProtocol();
         checkApplication();
@@ -413,6 +421,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             path = interfaceName;
         }
         doExportUrls();
+
+        // dispatch a ServiceConfigExportedEvent since 2.7.4
+        dispatch(new ServiceConfigExportedEvent(this));
     }
 
     private void checkRef() {
@@ -445,6 +456,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             exporters.clear();
         }
         unexported = true;
+
+        // dispatch a ServiceConfigUnExportedEvent since 2.7.4
+        dispatch(new ServiceConfigUnexportedEvent(this));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -618,9 +632,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                  * @since 2.7.0
                  * ServiceData Store
                  */
-                MetadataReportService metadataReportService = null;
-                if ((metadataReportService = getMetadataReportService()) != null) {
-                    metadataReportService.publishProvider(url);
+                WritableMetadataService metadataService = WritableMetadataService.getExtension(url.getParameter(METADATA_KEY, METADATA_DEFAULT));
+                if (metadataService != null) {
+                    metadataService.publishServiceDefinition(url);
                 }
             }
         }
@@ -752,7 +766,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             if (portToBind == null || portToBind == 0) {
                 portToBind = defaultPort;
             }
-            if (portToBind <= 0) {
+            if (portToBind == null || portToBind <= 0) {
                 portToBind = getRandomPort(name);
                 if (portToBind == null || portToBind < 0) {
                     portToBind = getAvailablePort(defaultPort);
@@ -865,39 +879,23 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     private void convertProtocolIdsToProtocols() {
-        if (StringUtils.isEmpty(protocolIds) && CollectionUtils.isEmpty(protocols)) {
-            List<String> configedProtocols = new ArrayList<>();
-            configedProtocols.addAll(getSubProperties(Environment.getInstance()
-                    .getExternalConfigurationMap(), PROTOCOLS_SUFFIX));
-            configedProtocols.addAll(getSubProperties(Environment.getInstance()
-                    .getAppExternalConfigurationMap(), PROTOCOLS_SUFFIX));
-
-            protocolIds = String.join(",", configedProtocols);
-        }
-
         if (StringUtils.isEmpty(protocolIds)) {
             if (CollectionUtils.isEmpty(protocols)) {
-                setProtocols(
-                        ConfigManager.getInstance().getDefaultProtocols()
-                                .filter(CollectionUtils::isNotEmpty)
-                                .orElseGet(() -> {
-                                    ProtocolConfig protocolConfig = new ProtocolConfig();
-                                    protocolConfig.refresh();
-                                    return new ArrayList<>(Arrays.asList(protocolConfig));
-                                })
-                );
+                List<ProtocolConfig> protocolConfigs = ConfigManager.getInstance().getDefaultProtocols();
+                if (protocolConfigs.isEmpty()) {
+                    protocolConfigs = new ArrayList<>(1);
+                    ProtocolConfig protocolConfig = new ProtocolConfig();
+                    protocolConfig.refresh();
+                    protocolConfigs.add(protocolConfig);
+                }
+                setProtocols(protocolConfigs);
             }
         } else {
             String[] arr = COMMA_SPLIT_PATTERN.split(protocolIds);
             List<ProtocolConfig> tmpProtocols = CollectionUtils.isNotEmpty(protocols) ? protocols : new ArrayList<>();
             Arrays.stream(arr).forEach(id -> {
                 if (tmpProtocols.stream().noneMatch(prot -> prot.getId().equals(id))) {
-                    tmpProtocols.add(ConfigManager.getInstance().getProtocol(id).orElseGet(() -> {
-                        ProtocolConfig protocolConfig = new ProtocolConfig();
-                        protocolConfig.setId(id);
-                        protocolConfig.refresh();
-                        return protocolConfig;
-                    }));
+                    ConfigManager.getInstance().getProtocol(id).ifPresent(tmpProtocols::add);
                 }
             });
             if (tmpProtocols.size() > arr.length) {
@@ -1050,5 +1048,15 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     @Parameter(excluded = true)
     public String getPrefix() {
         return DUBBO + ".service." + interfaceName;
+    }
+
+    /**
+     * Dispatch an {@link Event event}
+     *
+     * @param event an {@link Event event}
+     * @since 2.7.4
+     */
+    protected void dispatch(Event event) {
+        eventDispatcher.dispatch(event);
     }
 }

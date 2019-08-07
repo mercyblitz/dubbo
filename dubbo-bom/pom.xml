@@ -23,6 +23,7 @@
         <groupId>org.apache.dubbo</groupId>
         <artifactId>dubbo-parent</artifactId>
         <version>${revision}</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>dubbo-bom</artifactId>
@@ -44,8 +45,8 @@
         <url>https://github.com/apache/dubbo</url>
         <connection>scm:git:https://github.com/apache/dubbo.git</connection>
         <developerConnection>scm:git:https://github.com/apache/dubbo.git</developerConnection>
-        <tag>HEAD</tag>
-    </scm>
+      <tag>HEAD</tag>
+  </scm>
     <mailingLists>
         <mailingList>
             <name>Development List</name>
@@ -362,9 +363,10 @@
                 <artifactId>dubbo-compatible</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <!-- metadata -->
             <dependency>
                 <groupId>org.apache.dubbo</groupId>
-                <artifactId>dubbo-metadata-report-api</artifactId>
+                <artifactId>dubbo-metadata-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -392,11 +394,8 @@
                 <artifactId>dubbo-metadata-report-nacos</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.apache.dubbo</groupId>
-                <artifactId>dubbo-configcenter-api</artifactId>
-                <version>${project.version}</version>
-            </dependency>
+
+            <!-- config-center -->
             <dependency>
                 <groupId>org.apache.dubbo</groupId>
                 <artifactId>dubbo-configcenter-zookeeper</artifactId>
@@ -420,16 +419,6 @@
             <dependency>
                 <groupId>org.apache.dubbo</groupId>
                 <artifactId>dubbo-configcenter-nacos</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.dubbo</groupId>
-                <artifactId>dubbo-metadata-definition</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.dubbo</groupId>
-                <artifactId>dubbo-metadata-definition-protobuf</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
