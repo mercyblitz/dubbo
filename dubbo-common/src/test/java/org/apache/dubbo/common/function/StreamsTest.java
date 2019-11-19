@@ -33,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * {@link Streams} Test
  *
- * @since 2.7.5
+ * @since 2.7.6
  */
 public class StreamsTest {
 

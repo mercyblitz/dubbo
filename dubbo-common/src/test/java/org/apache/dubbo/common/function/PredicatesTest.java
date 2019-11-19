@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * {@link Predicates} Test
  *
- * @since 2.7.5
+ * @since 2.7.6
  */
 public class PredicatesTest {
 
