@@ -16,6 +16,7 @@
  */
 package org.apache.dubbo.common.utils;
 
+import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -239,5 +240,48 @@ public class CollectionUtils {
             return emptySet();
         }
         return unmodifiableSet(new LinkedHashSet<>(asList(values)));
+    }
+
+    /**
+     * Get the size of the specified {@link Collection}
+     *
+     * @param collection the specified {@link Collection}
+     * @return must be positive number
+     * @since 2.7.6
+     */
+    public static int size(Collection<?> collection) {
+        return collection == null ? 0 : collection.size();
+    }
+
+    /**
+     * Compares the specified collection with another, the main implementation references
+     * {@link AbstractSet}
+     *
+     * @param one     {@link Collection}
+     * @param another {@link Collection}
+     * @return if equals, return <code>true</code>, or <code>false</code>
+     * @since 2.7.6
+     */
+    public static boolean equals(Collection<?> one, Collection<?> another) {
+
+        if (one == another) {
+            return true;
+        }
+
+        if (isEmpty(one) && isEmpty(another)) {
+            return true;
+        }
+
+        if (size(one) != size(another)) {
+            return false;
+        }
+
+        try {
+            return one.containsAll(another);
+        } catch (ClassCastException unused) {
+            return false;
+        } catch (NullPointerException unused) {
+            return false;
+        }
     }
 }

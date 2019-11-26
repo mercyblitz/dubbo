@@ -19,6 +19,12 @@ package org.apache.dubbo.config.spring.action;
 import org.apache.dubbo.config.spring.api.DemoService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ResolvableType;
+
+import java.util.Collection;
+import java.util.stream.Stream;
+
+import static java.util.Arrays.asList;
 
 /**
  * DemoAction
@@ -32,4 +38,13 @@ public class DemoActionByAnnotation {
         return demoService;
     }
 
+    public static void main(String[] args) {
+        Collection<String> values = asList("1", "2", "3");
+        ResolvableType resolvableType = ResolvableType.forClass(values.getClass());
+        Stream.of(resolvableType.asCollection().getGenerics())
+                .map(ResolvableType::resolve)
+                .forEach(type -> {
+                    System.out.println(type);
+                });
+    }
 }

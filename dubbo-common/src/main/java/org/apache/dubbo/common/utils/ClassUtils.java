@@ -19,10 +19,20 @@ package org.apache.dubbo.common.utils;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
+
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.toList;
+import static org.apache.dubbo.common.function.Streams.filterAll;
+import static org.apache.dubbo.common.utils.ArrayUtils.isNotEmpty;
 
 public class ClassUtils {
     /**
@@ -284,5 +294,82 @@ public class ClassUtils {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Get all super classes from the specified type
+     *
+     * @param type         the specified type
+     * @param classFilters the filters for classes
+     * @return non-null read-only {@link Set}
+     * @since 2.7.6
+     */
+    public static Set<Class<?>> getAllSuperClasses(Class<?> type, Predicate<Class<?>>... classFilters) {
+
+        Set<Class<?>> allSuperClasses = new LinkedHashSet<>();
+
+        Class<?> superClass = type.getSuperclass();
+
+        if (superClass != null) {
+            // add current super class
+            allSuperClasses.add(superClass);
+            // add ancestor classes
+            allSuperClasses.addAll(getAllSuperClasses(superClass));
+        }
+
+        return unmodifiableSet(filterAll(allSuperClasses, classFilters));
+    }
+
+    /**
+     * Get all interfaces from the specified type
+     *
+     * @param type the specified type
+     * @return non-null read-only {@link Set}
+     * @since 2.7.6
+     */
+    public static Set<Class<?>> getAllInterfaces(Class<?> type, Predicate<Class<?>>... interfaceFilters) {
+
+        Set<Class<?>> allInterfaces = new LinkedHashSet<>();
+
+        Class<?>[] interfaces = type.getInterfaces();
+
+        if (isNotEmpty(interfaces)) {
+            // add current interfaces
+            allInterfaces.addAll(asList(interfaces));
+        }
+
+        // add all super interfaces
+        getAllSuperClasses(type).forEach(superType -> allInterfaces.addAll(getAllInterfaces(superType)));
+
+        // add all super interfaces from all interfaces
+        allInterfaces.stream()
+                .map(ClassUtils::getAllInterfaces)
+                .flatMap(Collection::stream)
+                .collect(toList())
+                .forEach(allInterfaces::add);
+
+        return filterAll(allInterfaces, interfaceFilters);
+    }
+
+
+    /**
+     * the semantics is same as {@link Class#isAssignableFrom(Class)}
+     *
+     * @param superType  the super type
+     * @param targetType the target type
+     * @return see {@link Class#isAssignableFrom(Class)}
+     * @since 2.7.6
+     */
+    public static boolean isAssignableFrom(Class<?> superType, Class<?> targetType) {
+        // any argument is null
+        if (superType == null || targetType == null) {
+            return false;
+        }
+        // equals
+        if (Objects.equals(superType, targetType)) {
+            return true;
+        }
+        // isAssignableFrom
+        return superType.isAssignableFrom(targetType);
     }
 }
