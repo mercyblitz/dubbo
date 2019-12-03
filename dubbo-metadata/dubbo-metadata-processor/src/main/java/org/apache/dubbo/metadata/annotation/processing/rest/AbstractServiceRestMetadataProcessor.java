@@ -26,6 +26,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.util.Elements;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -44,6 +45,7 @@ import static java.util.Optional.of;
 import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoader;
 import static org.apache.dubbo.metadata.annotation.processing.builder.MethodDefinitionBuilder.build;
 import static org.apache.dubbo.metadata.annotation.processing.util.LoggerUtils.info;
+import static org.apache.dubbo.metadata.annotation.processing.util.MethodUtils.getOverrideMethod;
 import static org.apache.dubbo.metadata.annotation.processing.util.MethodUtils.getPublicNonStaticMethods;
 import static org.apache.dubbo.metadata.annotation.processing.util.ServiceAnnotationUtils.getAnnotation;
 import static org.apache.dubbo.metadata.annotation.processing.util.ServiceAnnotationUtils.getGroup;
@@ -73,18 +75,24 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
 
         ServiceRestMetadata serviceRestMetadata = new ServiceRestMetadata();
 
+        Elements elements = processingEnv.getElementUtils();
+
         try {
             AnnotationMirror serviceAnnotation = getAnnotation(serviceType);
-            serviceRestMetadata.setServiceInterface(resolveServiceInterfaceName(serviceType, serviceAnnotation));
+            String serviceInterfaceName = resolveServiceInterfaceName(serviceType, serviceAnnotation);
+            serviceRestMetadata.setServiceInterface(serviceInterfaceName);
             serviceRestMetadata.setGroup(getGroup(serviceAnnotation));
             serviceRestMetadata.setVersion(getVersion(serviceAnnotation));
 
-            List<? extends ExecutableElement> methods = getPublicNonStaticMethods(serviceType, Object.class);
+            TypeElement serviceInterfaceType = elements.getTypeElement(serviceInterfaceName);
 
-            methods.forEach(method -> {
-                processRestMethodMetadata(processingEnv, serviceType, method)
+            List<? extends ExecutableElement> serviceMethods = getPublicNonStaticMethods(serviceInterfaceType, Object.class);
+
+            serviceMethods.forEach(serviceMethod -> {
+                processRestMethodMetadata(processingEnv, serviceType, serviceInterfaceType, serviceMethod)
                         .ifPresent(serviceRestMetadata.getMeta()::add);
             });
+
         } finally {
             clearCache();
         }
@@ -95,15 +103,23 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
     }
 
     protected Optional<RestMethodMetadata> processRestMethodMetadata(ProcessingEnvironment processingEnv,
-                                                                     TypeElement serviceType, ExecutableElement method) {
+                                                                     TypeElement serviceType,
+                                                                     TypeElement serviceInterfaceType,
+                                                                     ExecutableElement serviceMethod) {
 
-        String requestPath = getRequestPath(processingEnv, serviceType, method); // requestPath is required
+        ExecutableElement restCapableMethod = findRestCapableMethod(processingEnv, serviceType, serviceInterfaceType, serviceMethod);
+
+        if (restCapableMethod == null) { // if can't be found
+            return empty();
+        }
+
+        String requestPath = getRequestPath(processingEnv, serviceType, restCapableMethod); // requestPath is required
 
         if (requestPath == null) {
             return empty();
         }
 
-        String requestMethod = getRequestMethod(processingEnv, serviceType, method); // requestMethod is required
+        String requestMethod = getRequestMethod(processingEnv, serviceType, restCapableMethod); // requestMethod is required
 
         if (requestMethod == null) {
             return empty();
@@ -111,20 +127,20 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
 
         RestMethodMetadata metadata = new RestMethodMetadata();
 
-        MethodDefinition methodDefinition = getMethodDefinition(processingEnv, serviceType, method);
+        MethodDefinition methodDefinition = getMethodDefinition(processingEnv, serviceType, restCapableMethod);
         // Set MethodDefinition
         metadata.setMethod(methodDefinition);
 
         // process the annotated method parameters
-        processAnnotatedMethodParameters(method, serviceType, metadata);
+        processAnnotatedMethodParameters(restCapableMethod, serviceType, metadata);
 
         // process produces
         Set<String> produces = new LinkedHashSet<>();
-        processProduces(processingEnv, serviceType, method, produces);
+        processProduces(processingEnv, serviceType, restCapableMethod, produces);
 
         // process consumes
         Set<String> consumes = new LinkedHashSet<>();
-        processConsumes(processingEnv, serviceType, method, consumes);
+        processConsumes(processingEnv, serviceType, restCapableMethod, consumes);
 
         // Initialize RequestMetadata
         RequestMetadata request = metadata.getRequest();
@@ -134,10 +150,45 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
         request.setConsumes(consumes);
 
         // Post-Process
-        postProcessRestMethodMetadata(processingEnv, serviceType, method, metadata);
+        postProcessRestMethodMetadata(processingEnv, serviceType, serviceMethod, metadata);
 
         return of(metadata);
     }
+
+    /**
+     * Find the method with the capable for REST from the specified service method and its override method
+     *
+     * @param processingEnv        {@link ProcessingEnvironment}
+     * @param serviceType
+     * @param serviceInterfaceType
+     * @param serviceMethod
+     * @return <code>null</code> if can't be found
+     */
+    private ExecutableElement findRestCapableMethod(ProcessingEnvironment processingEnv,
+                                                    TypeElement serviceType,
+                                                    TypeElement serviceInterfaceType,
+                                                    ExecutableElement serviceMethod) {
+        // try to judge the override first
+        ExecutableElement overrideMethod = getOverrideMethod(processingEnv, serviceType, serviceMethod);
+        if (supports(processingEnv, serviceType, serviceInterfaceType, overrideMethod)) {
+            return overrideMethod;
+        }
+        // or, try to judge the declared method
+        return supports(processingEnv, serviceType, serviceInterfaceType, serviceMethod) ? serviceMethod : null;
+    }
+
+    /**
+     * Does the specified method support REST or not ?
+     *
+     * @param processingEnv {@link ProcessingEnvironment}
+     * @param method        the method may be declared on the interface or class
+     * @return if supports, return <code>true</code>, or <code>false</code>
+     */
+    protected abstract boolean supports(ProcessingEnvironment processingEnv,
+                                        TypeElement serviceType,
+                                        TypeElement serviceInterfaceType,
+                                        ExecutableElement method);
+
 
     /**
      * Post-Process for {@link RestMethodMetadata}, sub-type could override this method for further works

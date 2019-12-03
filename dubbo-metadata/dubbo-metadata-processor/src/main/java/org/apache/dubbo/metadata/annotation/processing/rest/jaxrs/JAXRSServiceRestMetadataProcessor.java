@@ -64,7 +64,18 @@ public class JAXRSServiceRestMetadataProcessor extends AbstractServiceRestMetada
 
     @Override
     public boolean supports(ProcessingEnvironment processingEnvironment, TypeElement serviceType) {
+        return supports(serviceType);
+    }
+
+    public static boolean supports(TypeElement serviceType) {
         return isAnnotationPresent(serviceType, PATH_ANNOTATION_CLASS_NAME);
+    }
+
+    @Override
+    protected boolean supports(ProcessingEnvironment processingEnv, TypeElement serviceType,
+                               TypeElement serviceInterfaceType, ExecutableElement method) {
+        return isAnnotationPresent(method, PATH_ANNOTATION_CLASS_NAME) ||
+                isAnnotationPresent(method, HTTP_METHOD_ANNOTATION_CLASS_NAME);
     }
 
     @Override

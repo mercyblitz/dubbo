@@ -29,7 +29,7 @@ import java.util.Set;
  *
  * @since 2.7.6
  */
-@SPI
+@SPI("default")
 public interface ServiceRestMetadataProcessor extends Prioritized {
 
     /**

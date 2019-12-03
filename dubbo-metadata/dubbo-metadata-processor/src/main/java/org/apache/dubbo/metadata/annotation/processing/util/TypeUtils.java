@@ -51,6 +51,7 @@ import static javax.lang.model.element.ElementKind.ENUM;
 import static javax.lang.model.element.ElementKind.INTERFACE;
 import static org.apache.dubbo.common.function.Predicates.EMPTY_ARRAY;
 import static org.apache.dubbo.common.function.Streams.filterAll;
+import static org.apache.dubbo.common.function.Streams.filterFirst;
 
 /**
  * The utilities class for type in the package "javax.lang.model.*"
@@ -230,6 +231,10 @@ public interface TypeUtils {
         // Add all super types' interfaces
         getAllSuperTypes(type).forEach(superType -> allInterfaces.addAll(getAllInterfaces(superType)));
         return filterAll(allInterfaces, interfaceFilters);
+    }
+
+    static TypeMirror findInterface(TypeMirror type, CharSequence interfaceClassName) {
+        return filterFirst(getAllInterfaces(type), t -> isSameType(t, interfaceClassName));
     }
 
     static TypeElement getType(ProcessingEnvironment processingEnv, Type type) {
