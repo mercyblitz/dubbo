@@ -179,11 +179,15 @@ public class ConfigManager extends LifecycleAdapter implements FrameworkExt {
     }
 
     public Optional<ProviderConfig> getDefaultProvider() {
-        return getProvider(DEFAULT_KEY);
+        return getProvider(genDefaultId(ProviderConfig.class));
     }
 
     public Collection<ProviderConfig> getProviders() {
         return getConfigs(getTagName(ProviderConfig.class));
+    }
+
+    private static String genDefaultId(Class<?> clazz) {
+        return clazz.getSimpleName() + "#" + DEFAULT_KEY;
     }
 
     // ConsumerConfig correlative methods
@@ -201,7 +205,7 @@ public class ConfigManager extends LifecycleAdapter implements FrameworkExt {
     }
 
     public Optional<ConsumerConfig> getDefaultConsumer() {
-        return getConsumer(DEFAULT_KEY);
+        return getConsumer(genDefaultId(ConsumerConfig.class));
     }
 
     public Collection<ConsumerConfig> getConsumers() {
@@ -400,10 +404,10 @@ public class ConfigManager extends LifecycleAdapter implements FrameworkExt {
 //                throw new IllegalStateException("No such " + configType.getName() + " is found");
                 return null;
             } else if (size > 1) {
-                throw new IllegalStateException("The expected single matching " + configType + " but found " + size + " instances");
-            } else {
-                return configsMap.values().iterator().next();
+                logger.warn("Expected single matching of " + configType + ", but found " + size + " instances, will randomly pick the first one.");
             }
+
+            return configsMap.values().iterator().next();
         });
     }
 
@@ -484,9 +488,20 @@ public class ConfigManager extends LifecycleAdapter implements FrameworkExt {
     }
 
     static <C extends AbstractConfig> String getId(C config) {
+        if ((config instanceof ProviderConfig
+            || config instanceof ConsumerConfig
+            || config instanceof ApplicationConfig
+            || config instanceof MonitorConfig
+            || config instanceof RegistryConfig
+            || config instanceof ProtocolConfig
+            || config instanceof ModuleConfig)
+            && isDefaultConfig(config)) {
+            return genDefaultId(config.getClass());
+        }
+
         String id = config.getId();
         return isNotEmpty(id) ? id : isDefaultConfig(config) ?
-                config.getClass().getSimpleName() + "#" + DEFAULT_KEY : null;
+            genDefaultId(config.getClass()) : null;
     }
 
     static <C extends AbstractConfig> boolean isDefaultConfig(C config) {
