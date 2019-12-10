@@ -16,6 +16,7 @@
  */
 package org.apache.dubbo.config.spring.context.annotation;
 
+import com.alibaba.spring.context.annotation.ExposingClassPathBeanDefinitionScanner;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -32,8 +33,11 @@ import static org.springframework.context.annotation.AnnotationConfigUtils.regis
  *
  * @see #doScan(String...)
  * @see #registerDefaultFilters()
+ * @see ExposingClassPathBeanDefinitionScanner
  * @since 2.5.7
+ * @deprecated Please {@link ExposingClassPathBeanDefinitionScanner}, it will be removed in 3.0
  */
+@Deprecated
 public class DubboClassPathBeanDefinitionScanner extends ClassPathBeanDefinitionScanner {
 
 

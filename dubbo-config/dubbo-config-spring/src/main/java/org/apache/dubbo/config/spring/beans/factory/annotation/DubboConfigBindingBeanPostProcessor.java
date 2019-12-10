@@ -52,8 +52,9 @@ import static org.springframework.beans.factory.BeanFactoryUtils.beansOfTypeIncl
  * @see EnableDubboConfigBinding
  * @see DubboConfigBindingRegistrar
  * @since 2.5.8
+ * @deprecated
  */
-
+@Deprecated
 public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, ApplicationContextAware, InitializingBean
         , BeanDefinitionRegistryPostProcessor {
 
