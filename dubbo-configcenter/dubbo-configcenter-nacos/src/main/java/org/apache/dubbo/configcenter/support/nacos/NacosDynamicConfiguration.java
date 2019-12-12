@@ -265,7 +265,7 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
         boolean published = false;
         String resolvedGroup = resolveGroup(group);
         try {
-            String value = configService.getConfig(key, resolvedGroup, -1L);
+            String value = configService.getConfig(key, resolvedGroup, getDefaultRequestTimeout());
             if (StringUtils.isNotEmpty(value)) {
                 content = value + "," + content;
             }
@@ -279,7 +279,6 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
     /**
      * TODO Nacos does not support atomic update of the value mapped to a key.
      *
-     * @param key
      * @param group the specified group
      * @return
      */
