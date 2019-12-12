@@ -110,6 +110,11 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
         watchListenerMap = new ConcurrentHashMap<>();
     }
 
+    @Override
+    public long getDefaultRequestTimeout() {
+        return DEFAULT_TIMEOUT;
+    }
+
     private ConfigService buildConfigService(URL url) {
         ConfigService configService = null;
         try {
@@ -234,7 +239,7 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
     public String getConfig(String key, String group, long timeout) throws IllegalStateException {
         String resolvedGroup = resolveGroup(group);
         try {
-            long nacosTimeout = timeout < 0 ? DEFAULT_TIMEOUT : timeout;
+            long nacosTimeout = timeout < 0 ? getDefaultRequestTimeout() : timeout;
             if (StringUtils.isEmpty(resolvedGroup)) {
                 resolvedGroup = DEFAULT_GROUP;
             }
@@ -248,7 +253,7 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
     @Override
     public Object getInternalProperty(String key) {
         try {
-            return configService.getConfig(key, DEFAULT_GROUP, DEFAULT_TIMEOUT);
+            return configService.getConfig(key, DEFAULT_GROUP, getDefaultRequestTimeout());
         } catch (NacosException e) {
             logger.error(e.getMessage());
         }
