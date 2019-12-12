@@ -88,14 +88,15 @@ public interface DynamicConfiguration extends Configuration, AutoCloseable {
     void removeListener(String key, String group, ConfigurationListener listener);
 
     /**
-     * Get the configuration mapped to the given key and the given group
+     * Get the configuration mapped to the given key and the given group with {@link #getDefaultRequestTimeout()
+     * the default timeout}
      *
      * @param key   the key to represent a configuration
      * @param group the group where the key belongs to
      * @return target configuration mapped to the given key and the given group
      */
     default String getConfig(String key, String group) {
-        return getConfig(key, group, -1L);
+        return getConfig(key, group, getDefaultRequestTimeout());
     }
 
     /**
@@ -112,9 +113,10 @@ public interface DynamicConfiguration extends Configuration, AutoCloseable {
 
     /**
      * This method are mostly used to get a compound config file, such as a complete dubbo.properties file.
+     * with {@link #getDefaultRequestTimeout() the default timeout}
      */
     default String getProperties(String key, String group) throws IllegalStateException {
-        return getProperties(key, group, -1L);
+        return getProperties(key, group, getDefaultRequestTimeout());
     }
 
     /**
@@ -174,6 +176,16 @@ public interface DynamicConfiguration extends Configuration, AutoCloseable {
     @Override
     default void close() throws Exception {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Get the default timeout for the request in milliseconds
+     *
+     * @return The default value is <code>-1L</code>
+     * @since 2.7.6
+     */
+    default long getDefaultRequestTimeout() {
+        return -1L;
     }
 
     /**
