@@ -110,11 +110,6 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
         watchListenerMap = new ConcurrentHashMap<>();
     }
 
-    @Override
-    public long getDefaultRequestTimeout() {
-        return DEFAULT_TIMEOUT;
-    }
-
     private ConfigService buildConfigService(URL url) {
         ConfigService configService = null;
         try {
@@ -239,7 +234,7 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
     public String getConfig(String key, String group, long timeout) throws IllegalStateException {
         String resolvedGroup = resolveGroup(group);
         try {
-            long nacosTimeout = timeout < 0 ? getDefaultRequestTimeout() : timeout;
+            long nacosTimeout = timeout < 0 ? getDefaultTimeout() : timeout;
             if (StringUtils.isEmpty(resolvedGroup)) {
                 resolvedGroup = DEFAULT_GROUP;
             }
@@ -253,7 +248,7 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
     @Override
     public Object getInternalProperty(String key) {
         try {
-            return configService.getConfig(key, DEFAULT_GROUP, getDefaultRequestTimeout());
+            return configService.getConfig(key, DEFAULT_GROUP, getDefaultTimeout());
         } catch (NacosException e) {
             logger.error(e.getMessage());
         }
@@ -265,7 +260,7 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
         boolean published = false;
         String resolvedGroup = resolveGroup(group);
         try {
-            String value = configService.getConfig(key, resolvedGroup, getDefaultRequestTimeout());
+            String value = configService.getConfig(key, resolvedGroup, getDefaultTimeout());
             if (StringUtils.isNotEmpty(value)) {
                 content = value + "," + content;
             }
@@ -276,9 +271,15 @@ public class NacosDynamicConfiguration implements DynamicConfiguration {
         return published;
     }
 
+    @Override
+    public long getDefaultTimeout() {
+        return DEFAULT_TIMEOUT;
+    }
+
     /**
      * TODO Nacos does not support atomic update of the value mapped to a key.
      *
+     * @param key
      * @param group the specified group
      * @return
      */
