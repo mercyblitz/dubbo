@@ -152,7 +152,7 @@ public class InMemoryWritableMetadataService implements WritableMetadataService 
 
     @Override
     public String getServiceDefinition(String interfaceName, String version, String group) {
-        return serviceDefinitions.get(URL.buildKey(interfaceName, group, version));
+        return getServiceDefinition(URL.buildKey(interfaceName, group, version));
     }
 
     @Override

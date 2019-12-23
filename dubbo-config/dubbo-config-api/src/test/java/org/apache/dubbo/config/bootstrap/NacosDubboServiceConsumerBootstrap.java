@@ -36,9 +36,9 @@ public class NacosDubboServiceConsumerBootstrap {
                 // Zookeeper
 //                .registry("nacos", builder -> builder.address("nacos://127.0.0.1:8848?registry.type=service&subscribed.services=dubbo-nacos-provider-demo"))
 //                .registry("nacos", builder -> builder.address("nacos://127.0.0.1:8848?registry-type=service&subscribed-services=dubbo-nacos-provider-demo"))
-                .registry("nacos", builder -> builder.address("nacos://127.0.0.1:8848?registry-type=service&subscribed-services=dubbo-nacos-provider-demo"))
+                .registry("nacos", builder -> builder.address("nacos://127.0.0.1:8848?registry-type=service&subscribed-services=spring-cloud-alibaba-dubbo-provider"))
                 .metadataReport(new MetadataReportConfig("nacos://127.0.0.1:8848"))
-                .reference("user", builder -> builder.interfaceClass(UserService.class).protocol("rest"))
+                .reference("user", builder -> builder.interfaceClass(UserService.class).protocol("rest").check(false))
                 .start();
 
         UserService userService = bootstrap.getCache().get(UserService.class);
