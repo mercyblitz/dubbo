@@ -19,6 +19,7 @@ package org.apache.dubbo.config.spring.context.annotation;
 import org.apache.dubbo.config.AbstractConfig;
 import org.apache.dubbo.config.spring.beans.factory.annotation.DubboConfigBindingBeanPostProcessor;
 import org.apache.dubbo.config.spring.beans.factory.config.ConfigurableSourceBeanMetadataElement;
+import org.apache.dubbo.config.spring.context.config.IdPropertyDefaultValueDubboConfigBeanCustomizer;
 import org.apache.dubbo.config.spring.context.config.NamePropertyDefaultValueDubboConfigBeanCustomizer;
 
 import com.alibaba.spring.beans.factory.annotation.ConfigurationBeanBindingRegistrar;
@@ -47,14 +48,12 @@ import java.util.Set;
 import static com.alibaba.spring.util.BeanRegistrar.registerInfrastructureBean;
 import static com.alibaba.spring.util.PropertySourcesUtils.getSubProperties;
 import static com.alibaba.spring.util.PropertySourcesUtils.normalizePrefix;
-import static org.apache.dubbo.config.spring.context.config.NamePropertyDefaultValueDubboConfigBeanCustomizer.BEAN_NAME;
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 import static org.springframework.beans.factory.support.BeanDefinitionReaderUtils.registerWithGeneratedName;
 import static org.springframework.core.annotation.AnnotationAttributes.fromMap;
 
 /**
  * {@link AbstractConfig Dubbo Config} binding Bean registrar
- *
  * @see EnableDubboConfigBinding
  * @see DubboConfigBindingBeanPostProcessor
  * @since 2.5.8
@@ -165,7 +164,11 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
     }
 
     private void registerDubboConfigBeanCustomizers(BeanDefinitionRegistry registry) {
-        registerInfrastructureBean(registry, BEAN_NAME, NamePropertyDefaultValueDubboConfigBeanCustomizer.class);
+        registerInfrastructureBean(registry, NamePropertyDefaultValueDubboConfigBeanCustomizer.BEAN_NAME,
+                NamePropertyDefaultValueDubboConfigBeanCustomizer.class);
+
+        registerInfrastructureBean(registry, IdPropertyDefaultValueDubboConfigBeanCustomizer.BEAN_NAME,
+                IdPropertyDefaultValueDubboConfigBeanCustomizer.class);
     }
 
     @Override
