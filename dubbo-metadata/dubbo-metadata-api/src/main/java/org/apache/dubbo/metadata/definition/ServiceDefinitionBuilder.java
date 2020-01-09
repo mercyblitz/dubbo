@@ -19,13 +19,11 @@ package org.apache.dubbo.metadata.definition;
 import org.apache.dubbo.metadata.definition.model.FullServiceDefinition;
 import org.apache.dubbo.metadata.definition.model.MethodDefinition;
 import org.apache.dubbo.metadata.definition.model.ServiceDefinition;
-import org.apache.dubbo.metadata.definition.model.TypeDefinition;
 import org.apache.dubbo.metadata.definition.util.ClassUtils;
 
 import com.google.gson.Gson;
 
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 
@@ -63,26 +61,10 @@ public final class ServiceDefinitionBuilder {
         sd.setCodeSource(ClassUtils.getCodeSource(interfaceClass));
 
         TypeDefinitionBuilder builder = new TypeDefinitionBuilder();
+        MethodDefinitionBuilder methodDefinitionBuilder = new MethodDefinitionBuilder();
         List<Method> methods = ClassUtils.getPublicNonStaticMethods(interfaceClass);
         for (Method method : methods) {
-            MethodDefinition md = new MethodDefinition();
-            md.setName(method.getName());
-
-            // Process parameter types.
-            Class<?>[] paramTypes = method.getParameterTypes();
-            Type[] genericParamTypes = method.getGenericParameterTypes();
-
-            String[] parameterTypes = new String[paramTypes.length];
-            for (int i = 0; i < paramTypes.length; i++) {
-                TypeDefinition td = builder.build(genericParamTypes[i], paramTypes[i]);
-                parameterTypes[i] = td.getType();
-            }
-            md.setParameterTypes(parameterTypes);
-
-            // Process return type.
-            TypeDefinition td = builder.build(method.getGenericReturnType(), method.getReturnType());
-            md.setReturnType(td.getType());
-
+            MethodDefinition md = methodDefinitionBuilder.build(method);
             sd.getMethods().add(md);
         }
 

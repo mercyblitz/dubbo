@@ -40,6 +40,8 @@ import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUti
 import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUtils.getAllAnnotations;
 import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUtils.getAttribute;
 import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUtils.isAnnotationPresent;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.SPRING_MVC.CONTROLLER_ANNOTATION_CLASS_NAME;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.SPRING_MVC.REQUEST_MAPPING_ANNOTATION_CLASS_NAME;
 
 /**
  * {@link ServiceRestMetadataProcessor}
@@ -49,10 +51,6 @@ import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUti
 public class SpringMvcServiceRestMetadataProcessor extends AbstractServiceRestMetadataProcessor {
 
     private static final int FIRST_ELEMENT_INDEX = 0;
-
-    public static final String CONTROLLER_ANNOTATION_CLASS_NAME = "org.springframework.stereotype.Controller";
-
-    public static final String REQUEST_MAPPING_ANNOTATION_CLASS_NAME = "org.springframework.web.bind.annotation.RequestMapping";
 
     @Override
     public boolean supports(ProcessingEnvironment processingEnvironment, TypeElement serviceType) {

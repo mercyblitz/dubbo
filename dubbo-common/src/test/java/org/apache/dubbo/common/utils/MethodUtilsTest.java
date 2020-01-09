@@ -20,6 +20,20 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.util.LinkedList;
+import java.util.List;
+
+import static java.util.Arrays.asList;
+import static org.apache.dubbo.common.utils.MethodUtils.findMethod;
+import static org.apache.dubbo.common.utils.MethodUtils.getAllMethods;
+import static org.apache.dubbo.common.utils.MethodUtils.getMethods;
+import static org.apache.dubbo.common.utils.MethodUtils.invokeMethod;
+import static org.apache.dubbo.common.utils.MethodUtils.overrides;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MethodUtilsTest {
 
@@ -31,7 +45,7 @@ public class MethodUtilsTest {
                 getMethod = method;
             }
         }
-        Assertions.assertNotNull(getMethod);
+        assertNotNull(getMethod);
         Assertions.assertEquals("getValue", getMethod.getName());
     }
 
@@ -43,17 +57,166 @@ public class MethodUtilsTest {
                 setMethod = method;
             }
         }
-        Assertions.assertNotNull(setMethod);
+        assertNotNull(setMethod);
         Assertions.assertEquals("setValue", setMethod.getName());
     }
 
     @Test
     public void testIsDeprecated() throws Exception {
-        Assertions.assertTrue(MethodUtils.isDeprecated(MethodTestClazz.class.getMethod("deprecatedMethod")));
+        assertTrue(MethodUtils.isDeprecated(MethodTestClazz.class.getMethod("deprecatedMethod")));
         Assertions.assertFalse(MethodUtils.isDeprecated(MethodTestClazz.class.getMethod("getValue")));
     }
 
+    @Test
+    public void testFindMethod() {
+        Method method = findMethod(MethodTestClazz.class, "getValue");
+        assertNotNull(method);
+
+        method = findMethod(MethodTestClazz.class, "setValue", String.class);
+        assertNotNull(method);
+
+        method = findMethod(MethodTestClazz.class, "setValue");
+        assertNull(method);
+    }
+
+    @Test
+    public void testInvokeMethod() {
+        MethodTestClazz instance = new MethodTestClazz();
+        String value = invokeMethod(instance, "getValue");
+        assertNull(value);
+        invokeMethod(instance, "setValue", "Hello,World");
+        value = invokeMethod(instance, "getValue");
+        assertEquals("Hello,World", value);
+    }
+
+    @Test
+    public void testGetMethods() {
+
+        List<Method> methods = getMethods(I.class);
+        assertEquals(asList(findMethod(I.class, "execute", int.class, Object.class)), methods);
+
+        methods = new LinkedList<>(getMethods(A.class));
+        methods.removeAll(getMethods(Object.class));
+        assertEquals(asList(findMethod(A.class, "execute", int.class, Object.class), findMethod(A.class, "execute")), methods);
+    }
+
+    @Test
+    public void testGetAllMethods() {
+
+        List<Method> methods = new LinkedList<>(getAllMethods(A.class));
+        methods.removeAll(getAllMethods(Object.class));
+        assertEquals(asList(
+                findMethod(A.class, "execute", int.class, Object.class),
+                findMethod(A.class, "execute")
+        ), methods);
+
+    }
+
+    @Test
+    public void testOverrides() {
+
+        Method overridden = findMethod(I.class, "execute", int.class, Object.class);
+
+        // Case: null argument
+        assertFalse(overrides(overridden, null));
+        assertFalse(overrides(null, overridden));
+        assertFalse(overrides(null, null));
+
+        // Case : two methods are same
+        assertTrue(overrides(overridden, overridden));
+
+        // Case : instance method and static method
+        Method staticMethod = findMethod(B.class, "staticMethod");
+        assertFalse(overrides(overridden, staticMethod));
+
+        // Case : two methods with same signatures, without inheritance
+        Method nonOverriddenMethod = findMethod(C.class, "execute", int.class, Object.class);
+        assertFalse(overrides(overridden, nonOverriddenMethod));
+
+        // Case : two methods with different name
+        assertFalse(overrides(overridden, findMethod(B.class, "instanceMethod")));
+
+        // Case : Default method
+        assertFalse(overrides(overridden, findMethod(DI.class, "execute", int.class, Object.class)));
+
+        // Case : overload methods with the different arguments' count
+        assertFalse(overrides(overridden, findMethod(B.class, "execute")));
+
+        // Case : overload methods with the different parameters' types
+        assertFalse(overrides(overridden, findMethod(B.class, "execute", int.class, String.class)));
+
+        // Case : override method
+        Method overrider = findMethod(A.class, "execute", int.class, Object.class);
+        assertTrue(overrides(overrider, overridden));
+
+        overrider = findMethod(B.class, "execute", int.class, Object.class);
+        overridden = findMethod(A.class, "execute", int.class, Object.class);
+        assertTrue(overrides(overrider, overridden));
+    }
+
+    public interface I {
+
+        Object execute(int value, Object object);
+
+    }
+
+    public interface DI extends I {
+
+        @Override
+        default Object execute(int value, Object object) {
+            return null;
+        }
+
+    }
+
+    public static abstract class A implements DI {
+
+        public Object execute(int value, Object object) {
+            return null;
+        }
+
+        public abstract void execute(); // No overridden method, overload method
+
+    }
+
+    public static class B extends A {
+
+        @Override
+        public void execute() {
+
+        }
+
+        public String execute(int value, Object object) {
+            return null;
+        }
+
+        public void execute(int value, Integer string) {
+
+        }
+
+        public void execute(int value, String string) {
+
+        }
+
+        protected void instanceMethod() {
+
+        }
+
+        protected static void staticMethod() {
+
+        }
+    }
+
+    public static class C {
+
+        public Object execute(int value, Object object) {
+            return null;
+        }
+    }
+
+
     public class MethodTestClazz {
+
         private String value;
 
         public String getValue() {
@@ -68,6 +231,7 @@ public class MethodUtilsTest {
         public Boolean deprecatedMethod() {
             return true;
         }
+
     }
 
 }

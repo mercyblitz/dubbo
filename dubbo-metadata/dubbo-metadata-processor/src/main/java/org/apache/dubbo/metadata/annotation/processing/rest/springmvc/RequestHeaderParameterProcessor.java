@@ -23,6 +23,8 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.SPRING_MVC.REQUEST_HEADER_ANNOTATION_CLASS_NAME;
+
 /**
  * The {@link AnnotatedMethodParameterProcessor} implementation for Spring Web MVC's @RequestHeader
  */
@@ -30,7 +32,7 @@ public class RequestHeaderParameterProcessor extends AbstractRequestAnnotationPa
 
     @Override
     public String getAnnotationType() {
-        return "org.springframework.web.bind.annotation.RequestHeader";
+        return REQUEST_HEADER_ANNOTATION_CLASS_NAME;
     }
 
     @Override

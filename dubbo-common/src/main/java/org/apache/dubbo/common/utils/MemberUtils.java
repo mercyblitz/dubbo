@@ -14,21 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.metadata.annotation.processing.rest.jaxrs;
+package org.apache.dubbo.common.utils;
 
-import org.apache.dubbo.metadata.annotation.processing.rest.AnnotatedMethodParameterProcessor;
-
-import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.FORM_PARAM_ANNOTATION_CLASS_NAME;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Member;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
 /**
- * The {@link AnnotatedMethodParameterProcessor} implementation for JAX-RS's @FormParam
+ * Java Reflection {@link Member} Utilities class
  *
  * @since 2.7.6
  */
-public class FormParamParameterProcessor extends ParamAnnotationParameterProcessor {
+public abstract class MemberUtils {
 
-    @Override
-    public String getAnnotationType() {
-        return FORM_PARAM_ANNOTATION_CLASS_NAME;
+    /**
+     * check the specified {@link Member member} is static or not ?
+     *
+     * @param member {@link Member} instance, e.g, {@link Constructor}, {@link Method} or {@link Field}
+     * @return Iff <code>member</code> is static one, return <code>true</code>, or <code>false</code>
+     */
+    public static boolean isStatic(Member member) {
+        return member != null && Modifier.isStatic(member.getModifiers());
     }
+
 }

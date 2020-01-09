@@ -14,21 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.metadata.annotation.processing.rest.jaxrs;
+package org.apache.dubbo.metadata.rest.resolver;
 
-import org.apache.dubbo.metadata.annotation.processing.rest.AnnotatedMethodParameterProcessor;
-
-import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.FORM_PARAM_ANNOTATION_CLASS_NAME;
+import org.apache.dubbo.metadata.rest.ServiceRestMetadata;
 
 /**
- * The {@link AnnotatedMethodParameterProcessor} implementation for JAX-RS's @FormParam
+ * The interface to resolve the {@link ServiceRestMetadata REST metadata} from the specified
+ * Dubbo Service interface or type.
  *
  * @since 2.7.6
  */
-public class FormParamParameterProcessor extends ParamAnnotationParameterProcessor {
+public interface ServiceRestMetadataResolver {
 
-    @Override
-    public String getAnnotationType() {
-        return FORM_PARAM_ANNOTATION_CLASS_NAME;
-    }
+    /**
+     * Support to resolve {@link ServiceRestMetadata REST metadata} or not
+     *
+     * @param serviceType Dubbo Service interface or type
+     * @return If supports, return <code>true</code>, or <code>false</code>
+     */
+    boolean supports(Class<?> serviceType);
+
+    /**
+     * Resolve the {@link ServiceRestMetadata REST metadata} from the specified
+     * Dubbo Service interface or type
+     *
+     * @param serviceType Dubbo Service interface or type
+     * @return
+     */
+    ServiceRestMetadata resolve(Class<?> serviceType);
 }

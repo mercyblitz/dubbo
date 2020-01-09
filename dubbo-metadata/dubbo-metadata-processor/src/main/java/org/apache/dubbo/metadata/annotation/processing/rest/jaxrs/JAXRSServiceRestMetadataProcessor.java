@@ -34,6 +34,10 @@ import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUti
 import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUtils.getAnnotation;
 import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUtils.getValue;
 import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUtils.isAnnotationPresent;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.CONSUMES_ANNOTATION_CLASS_NAME;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.HTTP_METHOD_ANNOTATION_CLASS_NAME;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.PATH_ANNOTATION_CLASS_NAME;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.PRODUCES_ANNOTATION_CLASS_NAME;
 
 /**
  * {@link ServiceRestMetadataProcessor} implementation for JAX-RS 2 and 1
@@ -41,26 +45,6 @@ import static org.apache.dubbo.metadata.annotation.processing.util.AnnotationUti
  * @since 2.7.6
  */
 public class JAXRSServiceRestMetadataProcessor extends AbstractServiceRestMetadataProcessor {
-
-    /**
-     * The annotation name of @Path
-     */
-    public static final String PATH_ANNOTATION_CLASS_NAME = "javax.ws.rs.Path";
-
-    /**
-     * The annotation name of @HttpMethod
-     */
-    public static final String HTTP_METHOD_ANNOTATION_CLASS_NAME = "javax.ws.rs.HttpMethod";
-
-    /**
-     * The annotation class name of @Produces
-     */
-    public static final String PRODUCES_ANNOTATION_CLASS_NAME = "javax.ws.rs.Produces";
-
-    /**
-     * The annotation class name of @Consumes
-     */
-    public static final String CONSUMES_ANNOTATION_CLASS_NAME = "javax.ws.rs.Consumes";
 
     @Override
     public boolean supports(ProcessingEnvironment processingEnvironment, TypeElement serviceType) {

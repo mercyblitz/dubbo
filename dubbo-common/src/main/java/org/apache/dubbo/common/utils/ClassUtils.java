@@ -372,4 +372,38 @@ public class ClassUtils {
         // isAssignableFrom
         return superType.isAssignableFrom(targetType);
     }
+
+    /**
+     * Test the specified class name is present in the {@link ClassLoader}
+     *
+     * @param className   the name of {@link Class}
+     * @param classLoader {@link ClassLoader}
+     * @return If found, return <code>true</code>
+     * @since 2.7.6
+     */
+    public static boolean isPresent(String className, ClassLoader classLoader) {
+        try {
+            forName(className, classLoader);
+        } catch (Throwable ignored) { // Ignored
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Resolve the {@link Class} by the specified name and {@link ClassLoader}
+     *
+     * @param className   the name of {@link Class}
+     * @param classLoader {@link ClassLoader}
+     * @return If can't be resolved , return <code>null</code>
+     * @since 2.7.6
+     */
+    public static Class<?> resolveClass(String className, ClassLoader classLoader) {
+        Class<?> targetClass = null;
+        try {
+            targetClass = forName(className, classLoader);
+        } catch (Throwable ignored) { // Ignored
+        }
+        return targetClass;
+    }
 }

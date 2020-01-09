@@ -18,6 +18,8 @@ package org.apache.dubbo.metadata.annotation.processing.rest.jaxrs;
 
 import org.apache.dubbo.metadata.annotation.processing.rest.AnnotatedMethodParameterProcessor;
 
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.MATRIX_PARAM_ANNOTATION_CLASS_NAME;
+
 /**
  * The {@link AnnotatedMethodParameterProcessor} implementation for JAX-RS's @MatrixParam
  *
@@ -27,6 +29,6 @@ public class MatrixParamParameterProcessor extends ParamAnnotationParameterProce
 
     @Override
     public String getAnnotationType() {
-        return "javax.ws.rs.MatrixParam";
+        return MATRIX_PARAM_ANNOTATION_CLASS_NAME;
     }
 }

@@ -27,6 +27,8 @@ import javax.lang.model.element.VariableElement;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.DEFAULT_VALUE_ANNOTATION_CLASS_NAME;
+
 
 /**
  * The {@link AnnotatedMethodParameterProcessor} implementation for JAX-RS's @DefaultValue
@@ -35,11 +37,6 @@ import java.util.Map;
  * @since 2.7.6
  */
 public class DefaultValueParameterProcessor extends AbstractAnnotatedMethodParameterProcessor {
-
-    /**
-     * The annotation class name of @DefaultValue
-     */
-    public static final String DEFAULT_VALUE_ANNOTATION_CLASS_NAME = "javax.ws.rs.DefaultValue";
 
     @Override
     public String getAnnotationType() {

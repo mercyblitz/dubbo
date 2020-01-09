@@ -14,21 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.metadata.annotation.processing.rest.jaxrs;
+package org.apache.dubbo.common.utils;
 
-import org.apache.dubbo.metadata.annotation.processing.rest.AnnotatedMethodParameterProcessor;
+import org.junit.jupiter.api.Test;
 
-import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.FORM_PARAM_ANNOTATION_CLASS_NAME;
+import static org.apache.dubbo.common.utils.MemberUtils.isStatic;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The {@link AnnotatedMethodParameterProcessor} implementation for JAX-RS's @FormParam
+ * {@link MemberUtils} Test
  *
  * @since 2.7.6
  */
-public class FormParamParameterProcessor extends ParamAnnotationParameterProcessor {
+public class MemberUtilsTest {
 
-    @Override
-    public String getAnnotationType() {
-        return FORM_PARAM_ANNOTATION_CLASS_NAME;
+    @Test
+    public void testIsStatic() throws NoSuchMethodException {
+
+        assertFalse(isStatic(getClass().getMethod("testIsStatic")));
+        assertTrue(isStatic(getClass().getMethod("staticMethod")));
+    }
+
+    public static void staticMethod() {
+
     }
 }

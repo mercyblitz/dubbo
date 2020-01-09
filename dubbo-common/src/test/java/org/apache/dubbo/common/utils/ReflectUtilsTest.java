@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static org.apache.dubbo.common.utils.ReflectUtils.resolveTypes;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
@@ -405,7 +406,7 @@ public class ReflectUtilsTest {
     }
 
     @Test
-    public void testGetReturnTypes () throws Exception{
+    public void testGetReturnTypes() throws Exception {
         Class clazz = TypeClass.class;
 
         Type[] types = ReflectUtils.getReturnTypes(clazz.getMethod("getFuture"));
@@ -419,6 +420,21 @@ public class ReflectUtilsTest {
         Type[] types2 = ReflectUtils.getReturnTypes(clazz.getMethod("getListFuture"));
         Assertions.assertEquals("java.util.List", types2[0].getTypeName());
         Assertions.assertEquals("java.util.List<java.lang.String>", types2[1].getTypeName());
+    }
+
+    @Test
+    public void testResolveTypes() {
+        Class[] types = resolveTypes("1", 2, 3.f);
+        int i = 0;
+        assertEquals(String.class, types[i++]);
+        assertEquals(Integer.class, types[i++]);
+        assertEquals(Float.class, types[i++]);
+
+        types = resolveTypes("1", null, 3.f);
+        i = 0;
+        assertEquals(String.class, types[i++]);
+        assertNull(types[i++]);
+        assertEquals(Float.class, types[i++]);
     }
 
     public interface TypeClass {

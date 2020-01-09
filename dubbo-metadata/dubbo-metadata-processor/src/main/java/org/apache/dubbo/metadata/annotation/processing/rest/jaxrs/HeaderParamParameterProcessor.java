@@ -26,6 +26,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.VariableElement;
 
 import static org.apache.dubbo.metadata.annotation.processing.rest.AnnotatedMethodParameterProcessor.buildDefaultValue;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.HEADER_PARAM_ANNOTATION_CLASS_NAME;
 
 /**
  * The {@link AnnotatedMethodParameterProcessor} implementation for JAX-RS's @HeaderParam
@@ -36,7 +37,7 @@ public class HeaderParamParameterProcessor extends AbstractAnnotatedMethodParame
 
     @Override
     public String getAnnotationType() {
-        return "javax.ws.rs.HeaderParam";
+        return HEADER_PARAM_ANNOTATION_CLASS_NAME;
     }
 
     @Override
