@@ -20,14 +20,31 @@ package org.apache.dubbo.common.utils;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.io.Serializable;
+import java.util.AbstractCollection;
+import java.util.AbstractSet;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.function.Predicate;
+
+import static java.util.Arrays.asList;
+import static org.apache.dubbo.common.utils.ClassUtils.getAllInheritedTypes;
+import static org.apache.dubbo.common.utils.ClassUtils.getAllInterfaces;
+import static org.apache.dubbo.common.utils.ClassUtils.getAllSuperClasses;
+import static org.apache.dubbo.common.utils.ClassUtils.isAssignableFrom;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.sameInstance;
 import static org.hamcrest.Matchers.startsWith;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 
 public class ClassUtilsTest {
+
     @Test
     public void testForNameWithThreadContextClassLoader() throws Exception {
         ClassLoader oldClassLoader = Thread.currentThread().getContextClassLoader();
@@ -150,6 +167,95 @@ public class ClassUtilsTest {
         assertThat(ClassUtils.convertPrimitive(double.class, ""), equalTo(null));
         assertThat(ClassUtils.convertPrimitive(double.class, null), equalTo(null));
         assertThat(ClassUtils.convertPrimitive(double.class, "10.1"), equalTo(new Double(10.1)));
+    }
+
+
+    /**
+     * Test {@link ClassUtils#getAllSuperClasses(Class, Predicate[])}
+     * <p>
+     * A -> LinkedHashSet -> HashSet -> AbstractSet -> AbstractCollection -> Object.class
+     *
+     * @since 2.7.6
+     */
+    @Test
+    public void testGetAllSuperClasses() {
+        assertTrue(CollectionUtils.equals(
+                asList(LinkedHashSet.class, HashSet.class, AbstractSet.class, AbstractCollection.class, Object.class),
+                getAllSuperClasses(A.class)));
+
+        assertTrue(CollectionUtils.equals(
+                asList(LinkedHashSet.class, HashSet.class, AbstractSet.class, AbstractCollection.class),
+                getAllSuperClasses(A.class, type -> !Object.class.equals(type))));
+
+        assertTrue(CollectionUtils.equals(asList(Object.class),
+                getAllSuperClasses(A.class, type -> Object.class.equals(type))));
+    }
+
+    /**
+     * Test {@link ClassUtils#getAllInterfaces(Class, Predicate[])}
+     * <p>
+     * A -> Set, Cloneable, Serializable -> Collection -> Iterable
+     *
+     * @since 2.7.6
+     */
+    @Test
+    public void testGetAllInterfaces() {
+
+        assertTrue(CollectionUtils.equals(
+                asList(Set.class, Cloneable.class, Serializable.class, Collection.class, Iterable.class),
+                getAllInterfaces(A.class)));
+
+        assertTrue(CollectionUtils.equals(
+                asList(Set.class, Cloneable.class, Serializable.class, Collection.class),
+                getAllInterfaces(A.class, type -> !Iterable.class.equals(type))));
+    }
+
+    /**
+     * Test {@link ClassUtils#getAllInheritedTypes(Class, Predicate[])}
+     *
+     * @since 2.7.6
+     */
+    @Test
+    public void testGetAllInheritedTypes() {
+
+        assertTrue(CollectionUtils.equals(asList(
+                LinkedHashSet.class, HashSet.class, AbstractSet.class, AbstractCollection.class, Object.class,
+                Set.class, Cloneable.class, Serializable.class, Collection.class, Iterable.class),
+                getAllInheritedTypes(A.class)));
+
+        assertTrue(CollectionUtils.equals(asList(
+                LinkedHashSet.class, HashSet.class, AbstractSet.class, AbstractCollection.class, Object.class,
+                Set.class, Cloneable.class, Serializable.class),
+                getAllInheritedTypes(A.class, type -> !Iterable.class.equals(type), type -> !Collection.class.equals(type))));
+    }
+
+
+    @Test
+    public void testIsAssignableFrom() {
+
+        // null
+        assertFalse(isAssignableFrom(null, null));
+        assertFalse(isAssignableFrom(A.class, null));
+        assertFalse(isAssignableFrom(null, A.class));
+
+        // same type
+        assertTrue(isAssignableFrom(A.class, A.class));
+
+        // sub type
+        assertTrue(isAssignableFrom(LinkedHashSet.class, A.class));
+        assertTrue(isAssignableFrom(HashSet.class, A.class));
+        assertTrue(isAssignableFrom(Set.class, A.class));
+
+        // sub type : reverse
+        assertFalse(isAssignableFrom(A.class, Set.class));
+
+    }
+
+
+    // A -> LinkedHashSet -> HashSet -> AbstractSet -> AbstractCollection -> Object.class
+    // A -> Set, Cloneable, Serializable -> Collection -> Iterable
+    static class A extends LinkedHashSet {
+
     }
 
 }

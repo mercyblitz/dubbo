@@ -323,7 +323,8 @@ public class ClassUtils {
     /**
      * Get all interfaces from the specified type
      *
-     * @param type the specified type
+     * @param type             the specified type
+     * @param interfaceFilters the filters for interfaces
      * @return non-null read-only {@link Set}
      * @since 2.7.6
      */
@@ -349,6 +350,22 @@ public class ClassUtils {
                 .forEach(allInterfaces::add);
 
         return filterAll(allInterfaces, interfaceFilters);
+    }
+
+    /**
+     * Get all inherited types from the specified type
+     *
+     * @param type        the specified type
+     * @param typeFilters the filters for types
+     * @return non-null read-only {@link Set}
+     * @since 2.7.6
+     */
+    public static Set<Class<?>> getAllInheritedTypes(Class<?> type, Predicate<Class<?>>... typeFilters) {
+        // Add all super classes
+        Set<Class<?>> types = new LinkedHashSet<>(getAllSuperClasses(type, typeFilters));
+        // Add all interface classes
+        types.addAll(getAllInterfaces(type, typeFilters));
+        return unmodifiableSet(types);
     }
 
 

@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static java.util.Arrays.asList;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableSet;
 
@@ -236,10 +235,22 @@ public class CollectionUtils {
      * @return read-only {@link Set}
      */
     public static <T> Set<T> ofSet(T... values) {
-        if (values == null || values.length < 1) {
+        int size = values == null ? 0 : values.length;
+        if (size < 1) {
             return emptySet();
         }
-        return unmodifiableSet(new LinkedHashSet<>(asList(values)));
+
+        float loadFactor = 1f / ((size + 1) * 1.0f);
+
+        if (loadFactor > 0.75f) {
+            loadFactor = 0.75f;
+        }
+
+        Set<T> elements = new LinkedHashSet<>(size, loadFactor);
+        for (int i = 0; i < size; i++) {
+            elements.add(values[i]);
+        }
+        return unmodifiableSet(elements);
     }
 
     /**
@@ -283,5 +294,32 @@ public class CollectionUtils {
         } catch (NullPointerException unused) {
             return false;
         }
+    }
+
+    /**
+     * Add the multiple values into {@link Collection the specified collection}
+     *
+     * @param collection {@link Collection the specified collection}
+     * @param values     the multiple values
+     * @param <T>        the type of values
+     * @return the effected count after added
+     * @since 2.7.6
+     */
+    public static <T> int addAll(Collection<T> collection, T... values) {
+
+        int size = values == null ? 0 : values.length;
+
+        if (collection == null || size < 1) {
+            return 0;
+        }
+
+        int effectedCount = 0;
+        for (int i = 0; i < size; i++) {
+            if (collection.add(values[i])) {
+                effectedCount++;
+            }
+        }
+
+        return effectedCount;
     }
 }
