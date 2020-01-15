@@ -16,7 +16,6 @@
  */
 package org.apache.dubbo.metadata.rest.resolver.jaxrs;
 
-import org.apache.dubbo.metadata.rest.RestMetadataConstants;
 import org.apache.dubbo.metadata.rest.RestMethodMetadata;
 import org.apache.dubbo.metadata.rest.resolver.AbstractServiceRestMetadataResolver;
 import org.apache.dubbo.metadata.rest.resolver.ServiceRestMetadataResolver;
@@ -25,6 +24,8 @@ import java.lang.reflect.Method;
 import java.util.Set;
 
 import static org.apache.dubbo.common.utils.AnnotationUtils.isAnnotationPresent;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.HTTP_METHOD_ANNOTATION_CLASS_NAME;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.PATH_ANNOTATION_CLASS_NAME;
 
 /**
  * JAX-RS {@link ServiceRestMetadataResolver} implementation
@@ -35,16 +36,18 @@ public class JAXRSServiceRestMetadataResolver extends AbstractServiceRestMetadat
 
     @Override
     protected boolean supports0(Class<?> serviceType) {
-        return isAnnotationPresent(serviceType, RestMetadataConstants.JAX_RS.PATH_ANNOTATION_CLASS_NAME);
+        return isAnnotationPresent(serviceType, PATH_ANNOTATION_CLASS_NAME);
     }
 
     @Override
     protected boolean isRestCapableMethod(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass) {
-        return false;
+        return isAnnotationPresent(serviceType, HTTP_METHOD_ANNOTATION_CLASS_NAME);
     }
 
     @Override
     protected String resolveRequestMethod(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass) {
+
+
         return null;
     }
 

@@ -25,6 +25,7 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static org.apache.dubbo.common.utils.MethodUtils.findMethod;
+import static org.apache.dubbo.common.utils.MethodUtils.findNearestOverriddenMethod;
 import static org.apache.dubbo.common.utils.MethodUtils.getAllMethods;
 import static org.apache.dubbo.common.utils.MethodUtils.getMethods;
 import static org.apache.dubbo.common.utils.MethodUtils.invokeMethod;
@@ -152,6 +153,20 @@ public class MethodUtilsTest {
         overrider = findMethod(B.class, "execute", int.class, Object.class);
         overridden = findMethod(A.class, "execute", int.class, Object.class);
         assertTrue(overrides(overrider, overridden));
+    }
+
+    @Test
+    public void testFindOverriddenMethod() {
+        Method expectedOverriddenMethod = findMethod(DI.class, "execute", int.class, Object.class);
+        Method overriddenMethod = findNearestOverriddenMethod(findMethod(A.class, "execute", int.class, Object.class));
+        assertEquals(expectedOverriddenMethod, overriddenMethod);
+
+        expectedOverriddenMethod = findMethod(A.class, "execute", int.class, Object.class);
+        overriddenMethod = findNearestOverriddenMethod(findMethod(B.class, "execute", int.class, Object.class));
+        assertEquals(expectedOverriddenMethod, overriddenMethod);
+
+        overriddenMethod = findNearestOverriddenMethod(findMethod(C.class, "execute", int.class, Object.class));
+        assertNull(overriddenMethod);
     }
 
     public interface I {

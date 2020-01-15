@@ -18,9 +18,12 @@ package org.apache.dubbo.common.utils;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,10 +34,12 @@ import java.util.function.Predicate;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
+import static org.apache.dubbo.common.function.Predicates.and;
 import static org.apache.dubbo.common.function.Streams.filterAll;
 import static org.apache.dubbo.common.function.Streams.filterFirst;
 import static org.apache.dubbo.common.utils.ClassUtils.getAllInheritedTypes;
 import static org.apache.dubbo.common.utils.ClassUtils.resolveClass;
+import static org.apache.dubbo.common.utils.CollectionUtils.first;
 import static org.apache.dubbo.common.utils.MethodUtils.invokeMethod;
 
 /**
@@ -44,6 +49,16 @@ import static org.apache.dubbo.common.utils.MethodUtils.invokeMethod;
  */
 public interface AnnotationUtils {
 
+    /**
+     * Is the specified type a generic {@link Class type}
+     *
+     * @param annotatedElement the annotated element
+     * @return if <code>annotatedElement</code> is the {@link Class}, return <code>true</code>, or <code>false</code>
+     * @see ElementType#TYPE
+     */
+    static boolean isType(AnnotatedElement annotatedElement) {
+        return annotatedElement instanceof Class;
+    }
 
     /**
      * Is the type of specified annotation same to the expected type?
@@ -57,6 +72,16 @@ public interface AnnotationUtils {
             return false;
         }
         return Objects.equals(annotation.annotationType(), annotationType);
+    }
+
+    /**
+     * Build an instance of {@link Predicate} to excluded annotation type
+     *
+     * @param excludedAnnotationType excluded annotation type
+     * @return non-null
+     */
+    static Predicate<Annotation> excludedType(Class<? extends Annotation> excludedAnnotationType) {
+        return annotation -> !isSameType(annotation, excludedAnnotationType);
     }
 
     /**
@@ -111,15 +136,32 @@ public interface AnnotationUtils {
      *
      * @param annotatedElement    the annotated element
      * @param annotationsToFilter the annotations to filter
-     * @return non-null sorted {@link Set}
+     * @return non-null read-only {@link List}
      */
-    static List<? extends Annotation> getDeclaredAnnotations(AnnotatedElement annotatedElement,
-                                                             Predicate<Annotation>... annotationsToFilter) {
+    static List<Annotation> getDeclaredAnnotations(AnnotatedElement annotatedElement,
+                                                   Predicate<Annotation>... annotationsToFilter) {
         if (annotatedElement == null) {
             return emptyList();
         }
 
-        return filterAll(asList(annotatedElement.getDeclaredAnnotations()), annotationsToFilter);
+        return unmodifiableList(filterAll(asList(annotatedElement.getDeclaredAnnotations()), annotationsToFilter));
+    }
+
+    /**
+     * Get all directly declared annotations of the the annotated element, not including
+     * meta annotations.
+     *
+     * @param annotatedElement    the annotated element
+     * @param annotationsToFilter the annotations to filter
+     * @return non-null read-only {@link List}
+     */
+    static List<Annotation> getAllDeclaredAnnotations(AnnotatedElement annotatedElement,
+                                                      Predicate<Annotation>... annotationsToFilter) {
+        if (isType(annotatedElement)) {
+            return getAllDeclaredAnnotations((Class) annotatedElement, annotationsToFilter);
+        } else {
+            return getDeclaredAnnotations(annotatedElement, annotationsToFilter);
+        }
     }
 
     /**
@@ -128,9 +170,14 @@ public interface AnnotationUtils {
      *
      * @param type                the specified type
      * @param annotationsToFilter the annotations to filter
-     * @return non-null sorted {@link Set}
+     * @return non-null read-only {@link List}
      */
     static List<Annotation> getAllDeclaredAnnotations(Class<?> type, Predicate<Annotation>... annotationsToFilter) {
+
+        if (type == null) {
+            return emptyList();
+        }
+
         List<Annotation> allAnnotations = new LinkedList<>();
 
         // All types
@@ -147,23 +194,41 @@ public interface AnnotationUtils {
         return unmodifiableList(allAnnotations);
     }
 
+
     /**
-     * Get all meta annotation from the specified {@link Annotation annotation} type
+     * Get the meta-annotated {@link Annotation annotations} directly, excluding {@link Target}, {@link Retention}
+     * and {@link Documented}
      *
-     * @param annotationType the specified {@link Annotation annotation} type
+     * @param annotationType          the {@link Annotation annotation} type
+     * @param metaAnnotationsToFilter the meta annotations to filter
      * @return non-null read-only {@link List}
      */
-    static List<Annotation> getAllMetaAnnotations(Class<? extends Annotation> annotationType) {
-
-        List<Annotation> allMetaAnnotations = new LinkedList<>();
-
-        List<Annotation> metaAnnotations = getAllDeclaredAnnotations(annotationType,
+    static List<Annotation> getMetaAnnotations(Class<? extends Annotation> annotationType,
+                                               Predicate<Annotation>... metaAnnotationsToFilter) {
+        return getDeclaredAnnotations(annotationType,
                 // Excludes the Java native annotation types or it causes the stack overflow, e.g,
                 // @Target annotates itself
                 excludedType(Target.class),
                 excludedType(Retention.class),
-                excludedType(Documented.class)
+                excludedType(Documented.class),
+                // Add other predicates
+                and(metaAnnotationsToFilter)
         );
+    }
+
+    /**
+     * Get all meta annotations from the specified {@link Annotation annotation} type
+     *
+     * @param annotationType      the {@link Annotation annotation} type
+     * @param annotationsToFilter the annotations to filter
+     * @return non-null read-only {@link List}
+     */
+    static List<Annotation> getAllMetaAnnotations(Class<? extends Annotation> annotationType,
+                                                  Predicate<Annotation>... annotationsToFilter) {
+
+        List<Annotation> allMetaAnnotations = new LinkedList<>();
+
+        List<Annotation> metaAnnotations = getMetaAnnotations(annotationType);
 
         allMetaAnnotations.addAll(metaAnnotations);
 
@@ -172,18 +237,9 @@ public interface AnnotationUtils {
             allMetaAnnotations.addAll(getAllMetaAnnotations(metaAnnotation.annotationType()));
         }
 
-        return unmodifiableList(allMetaAnnotations);
+        return unmodifiableList(filterAll(allMetaAnnotations, annotationsToFilter));
     }
 
-    /**
-     * Build an instance of {@link Predicate} to excluded annotation type
-     *
-     * @param excludedAnnotationType excluded annotation type
-     * @return non-null
-     */
-    static Predicate<Annotation> excludedType(Class<? extends Annotation> excludedAnnotationType) {
-        return annotation -> !isSameType(annotation, excludedAnnotationType);
-    }
 
     /**
      * Find the annotation that is annotated on the specified type may be a meta-annotation
@@ -198,22 +254,64 @@ public interface AnnotationUtils {
     }
 
     /**
-     * To find the meta annotation from the annotated type by the specified type
+     * Find the meta annotations from the the {@link Annotation annotation} type by meta annotation type
      *
-     * @param type               the annotated type
+     * @param annotationType     the {@link Annotation annotation} type
      * @param metaAnnotationType the meta annotation type
-     * @param <A>                the meta annotation type
-     * @return If found, return the meta annotation, or <code>null</code>
+     * @param <A>                the type of required annotation
+     * @return if found, return all matched results, or get an {@link Collections#emptyList() empty list}
      */
-    static <A extends Annotation> A findMetaAnnotation(Class<?> type, Class<A> metaAnnotationType) {
-        for (Annotation annotation : getAllDeclaredAnnotations(type)) {
-            for (Annotation metaAnnotation : getAllMetaAnnotations(annotation.annotationType())) {
-                if (isSameType(metaAnnotation, metaAnnotationType)) {
-                    return (A) metaAnnotation;
-                }
-            }
+    static <A extends Annotation> List<A> findMetaAnnotations(Class<? extends Annotation> annotationType,
+                                                              Class<A> metaAnnotationType) {
+        return (List<A>) getAllMetaAnnotations(annotationType, a -> isSameType(a, metaAnnotationType));
+    }
+
+    /**
+     * Find the meta annotations from the the the annotated element by meta annotation type
+     *
+     * @param annotatedElement   the annotated element
+     * @param metaAnnotationType the meta annotation type
+     * @param <A>                the type of required annotation
+     * @return if found, return all matched results, or get an {@link Collections#emptyList() empty list}
+     */
+    static <A extends Annotation> List<A> findMetaAnnotations(AnnotatedElement annotatedElement,
+                                                              Class<A> metaAnnotationType) {
+        List<A> metaAnnotations = new LinkedList<>();
+
+        for (Annotation annotation : getAllDeclaredAnnotations(annotatedElement)) {
+            metaAnnotations.addAll(findMetaAnnotations(annotation.annotationType(), metaAnnotationType));
         }
-        return null;
+
+        return unmodifiableList(metaAnnotations);
+    }
+
+    /**
+     * Find the meta annotation from the annotated element by type
+     *
+     * @param annotationType     the {@link Annotation annotation} type
+     * @param metaAnnotationType the meta annotation type
+     * @param <A>                the type of required annotation
+     * @return If found, return the {@link CollectionUtils#first(Collection)} matched result, return <code>null</code>.
+     * If it requires more result, please consider to use {@link #findMetaAnnotations(Class, Class)}
+     * @see #findMetaAnnotations(Class, Class)
+     */
+    static <A extends Annotation> A findMetaAnnotation(Class<? extends Annotation> annotationType,
+                                                       Class<A> metaAnnotationType) {
+        return first(findMetaAnnotations(annotationType, metaAnnotationType));
+    }
+
+    /**
+     * Find the meta annotation from the annotated element by type
+     *
+     * @param annotatedElement   the annotated element
+     * @param metaAnnotationType the meta annotation type
+     * @param <A>                the type of required annotation
+     * @return If found, return the {@link CollectionUtils#first(Collection)} matched result, return <code>null</code>.
+     * If it requires more result, please consider to use {@link #findMetaAnnotations(AnnotatedElement, Class)}
+     * @see #findMetaAnnotations(AnnotatedElement, Class)
+     */
+    static <A extends Annotation> A findMetaAnnotation(AnnotatedElement annotatedElement, Class<A> metaAnnotationType) {
+        return first(findMetaAnnotations(annotatedElement, metaAnnotationType));
     }
 
     /**
@@ -250,7 +348,7 @@ public interface AnnotationUtils {
      * Tests the annotated element is annotated the specified annotation or not
      *
      * @param type           the annotated type
-     * @param annotationType the specified annotation type
+     * @param annotationType the class of annotation
      * @return If the specified annotation type is present, return <code>true</code>, or <code>false</code>
      */
     static boolean isAnnotationPresent(Class<?> type, Class<? extends Annotation> annotationType) {
@@ -260,15 +358,32 @@ public interface AnnotationUtils {
     /**
      * Tests the annotated element is present any specified annotation types
      *
-     * @param type                the annotated type
+     * @param annotatedElement    the annotated element
      * @param annotationClassName the class name of annotation
      * @return If any specified annotation types are present, return <code>true</code>
      */
-    static boolean isAnnotationPresent(Class<?> type, String annotationClassName) {
-        ClassLoader classLoader = type.getClass().getClassLoader();
-        Class<?> annotationType = resolveClass(annotationClassName, classLoader);
-        return annotationType != null && Annotation.class.isAssignableFrom(annotationType) &&
-                isAnnotationPresent(type, (Class<? extends Annotation>) annotationType);
+    static boolean isAnnotationPresent(AnnotatedElement annotatedElement, String annotationClassName) {
+        ClassLoader classLoader = annotatedElement.getClass().getClassLoader();
+        Class<?> resolvedType = resolveClass(annotationClassName, classLoader);
+        if (!Annotation.class.isAssignableFrom(resolvedType)) {
+            return false;
+        }
+        return isAnnotationPresent(annotatedElement, (Class<? extends Annotation>) resolvedType);
+    }
+
+    /**
+     * Tests the annotated element is present any specified annotation types
+     *
+     * @param annotatedElement the annotated element
+     * @param annotationType   the class of annotation
+     * @return If any specified annotation types are present, return <code>true</code>
+     */
+    static boolean isAnnotationPresent(AnnotatedElement annotatedElement, Class<? extends Annotation> annotationType) {
+        if (isType(annotatedElement)) {
+            return isAnnotationPresent((Class) annotatedElement, annotationType);
+        } else {
+            return annotatedElement.isAnnotationPresent(annotationType);
+        }
     }
 
     /**

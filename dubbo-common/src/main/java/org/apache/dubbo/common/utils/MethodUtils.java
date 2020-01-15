@@ -21,7 +21,6 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -31,6 +30,7 @@ import java.util.function.Predicate;
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
 import static org.apache.dubbo.common.function.Streams.filterAll;
+import static org.apache.dubbo.common.utils.ClassUtils.getAllInheritedTypes;
 import static org.apache.dubbo.common.utils.ClassUtils.getAllSuperClasses;
 import static org.apache.dubbo.common.utils.MemberUtils.isStatic;
 import static org.apache.dubbo.common.utils.ReflectUtils.EMPTY_CLASS_ARRAY;
@@ -81,6 +81,29 @@ public abstract class MethodUtils {
 
     public static boolean isDeprecated(Method method) {
         return method.getAnnotation(Deprecated.class) != null;
+    }
+
+    /**
+     * Get all public {@link Method methods} of the specified type hierarchically
+     *
+     * @param targetType the target type
+     * @return non-null read-only {@link List}
+     * @since 2.7.6
+     */
+    public static List<Method> getAllMethods(Class<?> targetType, Predicate<Method>... methodFilters) {
+
+        Set<Class<?>> superClasses = getAllSuperClasses(targetType);
+
+        // Add the methods from current type
+        List<Method> allMethods = new LinkedList<>(getMethods(targetType));
+
+        // Add the methods from all super classes
+        for (Class<?> superClass : superClasses) {
+            allMethods.addAll(getMethods(superClass));
+        }
+
+        // make read-only
+        return unmodifiableList(filterAll(allMethods, methodFilters));
     }
 
     /**
@@ -156,27 +179,6 @@ public abstract class MethodUtils {
     }
 
     /**
-     * Get all public {@link Method methods} of the specified type hierarchically
-     *
-     * @param targetType the target type
-     * @return non-null read-only {@link List}
-     * @since 2.7.6
-     */
-    public static List<Method> getAllMethods(Class<?> targetType, Predicate<Method>... methodFilters) {
-
-        Set<Class<?>> superClasses = getAllSuperClasses(targetType);
-
-        Set<Method> allMethods = new LinkedHashSet<>(getMethods(targetType));
-
-        for (Class<?> superClass : superClasses) {
-            allMethods.addAll(getMethods(superClass));
-        }
-
-        return unmodifiableList(new LinkedList<>(filterAll(allMethods, methodFilters)));
-    }
-
-
-    /**
      * Tests whether one method, as a member of a given type,
      * overrides another method.
      *
@@ -241,5 +243,35 @@ public abstract class MethodUtils {
         // Throwable comparison: "throws" Throwable list will be ignored, trust the compiler verify
 
         return true;
+    }
+
+    /**
+     * Find the nearest overridden {@link Method method} from the inherited class
+     *
+     * @param overrider the overrider {@link Method method}
+     * @return if found, the overrider <code>method</code>, or <code>null</code>
+     */
+    public static Method findNearestOverriddenMethod(Method overrider) {
+        Class<?> declaringClass = overrider.getDeclaringClass();
+        Method overriddenMethod = null;
+        for (Class<?> inheritedType : getAllInheritedTypes(declaringClass)) {
+            overriddenMethod = findOverriddenMethod(overrider, inheritedType);
+            if (overriddenMethod != null) {
+                break;
+            }
+        }
+        return overriddenMethod;
+    }
+
+    /**
+     * Find the overridden {@link Method method} from the declaring class
+     *
+     * @param overrider      the overrider {@link Method method}
+     * @param declaringClass the class that is declaring the overridden {@link Method method}
+     * @return if found, the overrider <code>method</code>, or <code>null</code>
+     */
+    public static Method findOverriddenMethod(Method overrider, Class<?> declaringClass) {
+        List<Method> matchedMethods = getAllMethods(declaringClass, method -> overrides(overrider, method));
+        return matchedMethods.isEmpty() ? null : matchedMethods.get(0);
     }
 }

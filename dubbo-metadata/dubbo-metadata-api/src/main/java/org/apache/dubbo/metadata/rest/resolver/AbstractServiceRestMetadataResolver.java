@@ -27,6 +27,7 @@ import org.apache.dubbo.metadata.rest.ServiceRestMetadata;
 
 import java.lang.reflect.Method;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -115,10 +116,22 @@ public abstract class AbstractServiceRestMetadataResolver implements ServiceRest
         }
     }
 
+    /**
+     * Resolve the service methods around the service interface class
+     *
+     * @param serviceType           the service interface implementation class
+     * @param serviceInterfaceClass the service interface class
+     * @return the declared methods in the interface and their overrider methods
+     */
     protected List<Method> resolveServiceMethods(Class<?> serviceType, Class<?> serviceInterfaceClass) {
         // The service methods declared the interface
+        List<Method> serviceMethods = new LinkedList<>();
         List<Method> declaredServiceMethods = getAllMethods(serviceInterfaceClass);
-        return getAllMethods(serviceType, method -> overrides(method, declaredServiceMethods));
+        List<Method> overriderMethods = getAllMethods(serviceType, method -> overrides(method, declaredServiceMethods));
+        // Add the overrider methods first
+        serviceMethods.addAll(overriderMethods);
+        serviceMethods.addAll(declaredServiceMethods);
+        return serviceMethods;
     }
 
     private boolean overrides(Method serviceMethod, List<Method> declaredServiceMethods) {

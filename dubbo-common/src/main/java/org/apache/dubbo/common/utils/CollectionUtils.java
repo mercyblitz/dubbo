@@ -322,4 +322,23 @@ public class CollectionUtils {
 
         return effectedCount;
     }
+
+    /**
+     * Take the first element from the specified collection
+     *
+     * @param values the collection object
+     * @param <T>    the type of element of collection
+     * @return if found, return the first one, or <code>null</code>
+     */
+    public static <T> T first(Collection<T> values) {
+        if (isEmpty(values)) {
+            return null;
+        }
+        if (values instanceof List) {
+            List<T> list = (List<T>) values;
+            return list.get(0);
+        } else {
+            return values.iterator().next();
+        }
+    }
 }
