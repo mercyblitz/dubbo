@@ -20,13 +20,16 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
-import java.util.LinkedList;
 import java.util.List;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
+import static org.apache.dubbo.common.utils.MethodUtils.excludeDeclaredClass;
 import static org.apache.dubbo.common.utils.MethodUtils.findMethod;
 import static org.apache.dubbo.common.utils.MethodUtils.findNearestOverriddenMethod;
+import static org.apache.dubbo.common.utils.MethodUtils.getAllDeclaredMethods;
 import static org.apache.dubbo.common.utils.MethodUtils.getAllMethods;
+import static org.apache.dubbo.common.utils.MethodUtils.getDeclaredMethods;
 import static org.apache.dubbo.common.utils.MethodUtils.getMethods;
 import static org.apache.dubbo.common.utils.MethodUtils.invokeMethod;
 import static org.apache.dubbo.common.utils.MethodUtils.overrides;
@@ -92,25 +95,87 @@ public class MethodUtilsTest {
 
     @Test
     public void testGetMethods() {
-
         List<Method> methods = getMethods(I.class);
+        assertEquals(1, methods.size());
         assertEquals(asList(findMethod(I.class, "execute", int.class, Object.class)), methods);
 
-        methods = new LinkedList<>(getMethods(A.class));
-        methods.removeAll(getMethods(Object.class));
-        assertEquals(asList(findMethod(A.class, "execute", int.class, Object.class), findMethod(A.class, "execute")), methods);
+        methods = getMethods(A.class, excludeDeclaredClass(Object.class));
+        assertEquals(2, methods.size());
+        assertTrue(methods.contains(findMethod(A.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(A.class, "execute")));
+
+        methods = getMethods(null);
+        assertEquals(emptyList(),methods);
+    }
+
+    @Test
+    public void testGetDeclaredMethods() {
+        List<Method> methods = getDeclaredMethods(I.class);
+        assertEquals(1, methods.size());
+        assertTrue(methods.contains(findMethod(I.class, "execute", int.class, Object.class)));
+
+        methods = getDeclaredMethods(DI.class);
+        assertEquals(1, methods.size());
+        assertTrue(methods.contains(findMethod(DI.class, "execute", int.class, Object.class)));
+
+        methods = getDeclaredMethods(B.class);
+        assertEquals(7, methods.size());
+        assertTrue(methods.contains(findMethod(B.class, "execute")));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, Integer.class)));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, String.class)));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, String.class)));
+        assertTrue(methods.contains(findMethod(B.class, "instanceMethod")));
+        assertTrue(methods.contains(findMethod(B.class, "staticMethod")));
     }
 
     @Test
     public void testGetAllMethods() {
 
-        List<Method> methods = new LinkedList<>(getAllMethods(A.class));
-        methods.removeAll(getAllMethods(Object.class));
-        assertEquals(asList(
-                findMethod(A.class, "execute", int.class, Object.class),
-                findMethod(A.class, "execute")
-        ), methods);
+        List<Method> methods = getAllMethods(A.class, excludeDeclaredClass(Object.class));
+        assertEquals(4, methods.size());
+        assertTrue(methods.contains(findMethod(A.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(A.class, "execute")));
+        assertTrue(methods.contains(findMethod(I.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(DI.class, "execute", int.class, Object.class)));
 
+
+        methods = getAllMethods(B.class, excludeDeclaredClass(Object.class));
+        assertEquals(9, methods.size());
+        assertTrue(methods.contains(findMethod(B.class, "execute")));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, Integer.class)));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, String.class)));
+        assertTrue(methods.contains(findMethod(A.class, "execute")));
+        assertTrue(methods.contains(findMethod(A.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(I.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(DI.class, "execute", int.class, Object.class)));
+    }
+
+    @Test
+    public void testGetAllDeclaredMethods() {
+        List<Method> methods = getAllDeclaredMethods(I.class);
+        assertEquals(1, methods.size());
+        assertTrue(methods.contains(findMethod(I.class, "execute", int.class, Object.class)));
+
+        methods = getAllDeclaredMethods(DI.class);
+        assertEquals(2, methods.size());
+        assertTrue(methods.contains(findMethod(I.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(DI.class, "execute", int.class, Object.class)));
+
+        methods = getAllDeclaredMethods(B.class, excludeDeclaredClass(Object.class));
+        assertEquals(11, methods.size());
+        assertTrue(methods.contains(findMethod(B.class, "execute")));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, Integer.class)));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, String.class)));
+        assertTrue(methods.contains(findMethod(B.class, "execute", int.class, String.class)));
+        assertTrue(methods.contains(findMethod(B.class, "instanceMethod")));
+        assertTrue(methods.contains(findMethod(B.class, "staticMethod")));
+        assertTrue(methods.contains(findMethod(A.class, "execute")));
+        assertTrue(methods.contains(findMethod(A.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(I.class, "execute", int.class, Object.class)));
+        assertTrue(methods.contains(findMethod(DI.class, "execute", int.class, Object.class)));
     }
 
     @Test

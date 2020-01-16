@@ -50,6 +50,24 @@ import static org.apache.dubbo.common.utils.MethodUtils.invokeMethod;
 public interface AnnotationUtils {
 
     /**
+     * Resolve the annotation type by the annotated element and resolved class name
+     *
+     * @param annotatedElement    the annotated element
+     * @param annotationClassName the class name of annotation
+     * @param <A>                 the type of annotation
+     * @return If resolved, return the type of annotation, or <code>null</code>
+     */
+    static <A extends Annotation> Class<A> resolveAnnotationType(AnnotatedElement annotatedElement,
+                                                                 String annotationClassName) {
+        ClassLoader classLoader = annotatedElement.getClass().getClassLoader();
+        Class<?> annotationType = resolveClass(annotationClassName, classLoader);
+        if (annotationType == null || !Annotation.class.isAssignableFrom(annotationType)) {
+            return null;
+        }
+        return (Class<A>) annotationType;
+    }
+
+    /**
      * Is the specified type a generic {@link Class type}
      *
      * @param annotatedElement the annotated element
@@ -94,7 +112,7 @@ public interface AnnotationUtils {
      * @throws IllegalArgumentException If the attribute name can't be found
      */
     static <T> T getAttribute(Annotation annotation, String attributeName) throws IllegalArgumentException {
-        return invokeMethod(annotation, attributeName);
+        return annotation == null ? null : invokeMethod(annotation, attributeName);
     }
 
     /**
@@ -121,12 +139,10 @@ public interface AnnotationUtils {
      */
     static <A extends Annotation> A getAnnotation(AnnotatedElement annotatedElement, String annotationClassName)
             throws ClassCastException {
-        ClassLoader classLoader = annotatedElement.getClass().getClassLoader();
-        Class<?> type = resolveClass(annotationClassName, classLoader);
-        if (type == null || !Annotation.class.isAssignableFrom(type)) {
+        Class<? extends Annotation> annotationType = resolveAnnotationType(annotatedElement, annotationClassName);
+        if (annotationType == null) {
             return null;
         }
-        Class<? extends Annotation> annotationType = (Class<? extends Annotation>) type;
         return (A) annotatedElement.getAnnotation(annotationType);
     }
 
@@ -240,17 +256,28 @@ public interface AnnotationUtils {
         return unmodifiableList(filterAll(allMetaAnnotations, annotationsToFilter));
     }
 
-
     /**
-     * Find the annotation that is annotated on the specified type may be a meta-annotation
+     * Find the annotation that is annotated on the specified element may be a meta-annotation
      *
-     * @param type           the specified type
-     * @param annotationType the type of annotation
-     * @param <A>            the required type of annotation
+     * @param annotatedElement    the annotated element
+     * @param annotationClassName the class name of annotation
+     * @param <A>                 the required type of annotation
      * @return If found, return first matched-type {@link Annotation annotation}, or <code>null</code>
      */
-    static <A extends Annotation> A findAnnotation(Class<?> type, Class<A> annotationType) {
-        return (A) filterFirst(getAllDeclaredAnnotations(type), a -> isSameType(a, annotationType));
+    static <A extends Annotation> A findAnnotation(AnnotatedElement annotatedElement, String annotationClassName) {
+        return findAnnotation(annotatedElement, resolveAnnotationType(annotatedElement, annotationClassName));
+    }
+
+    /**
+     * Find the annotation that is annotated on the specified element may be a meta-annotation
+     *
+     * @param annotatedElement the annotated element
+     * @param annotationType   the type of annotation
+     * @param <A>              the required type of annotation
+     * @return If found, return first matched-type {@link Annotation annotation}, or <code>null</code>
+     */
+    static <A extends Annotation> A findAnnotation(AnnotatedElement annotatedElement, Class<A> annotationType) {
+        return (A) filterFirst(getAllDeclaredAnnotations(annotatedElement), a -> isSameType(a, annotationType));
     }
 
     /**
@@ -286,7 +313,20 @@ public interface AnnotationUtils {
     }
 
     /**
-     * Find the meta annotation from the annotated element by type
+     * Find the meta annotation from the annotated element by meta annotation type
+     *
+     * @param annotatedElement        the annotated element
+     * @param metaAnnotationClassName the class name of meta annotation
+     * @param <A>                     the type of required annotation
+     * @return {@link #findMetaAnnotation(Class, Class)}
+     */
+    static <A extends Annotation> A findMetaAnnotation(AnnotatedElement annotatedElement,
+                                                       String metaAnnotationClassName) {
+        return findMetaAnnotation(annotatedElement, resolveAnnotationType(annotatedElement, metaAnnotationClassName));
+    }
+
+    /**
+     * Find the meta annotation from the annotation type by meta annotation type
      *
      * @param annotationType     the {@link Annotation annotation} type
      * @param metaAnnotationType the meta annotation type
@@ -301,7 +341,7 @@ public interface AnnotationUtils {
     }
 
     /**
-     * Find the meta annotation from the annotated element by type
+     * Find the meta annotation from the annotated element by meta annotation type
      *
      * @param annotatedElement   the annotated element
      * @param metaAnnotationType the meta annotation type

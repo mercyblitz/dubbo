@@ -238,6 +238,9 @@ public class AnnotationUtilsTest {
         Service service = findMetaAnnotation(B.class, Service.class);
         assertEquals(Cloneable.class, service.interfaceClass());
 
+        service = findMetaAnnotation(B.class, "org.apache.dubbo.config.annotation.Service");
+        assertEquals(Cloneable.class, service.interfaceClass());
+
         service = findMetaAnnotation(Service5.class, Service.class);
         assertEquals(Cloneable.class, service.interfaceClass());
     }

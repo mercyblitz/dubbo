@@ -24,21 +24,20 @@ import java.lang.reflect.Modifier;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Predicate;
 
-import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
 import static org.apache.dubbo.common.function.Streams.filterAll;
 import static org.apache.dubbo.common.utils.ClassUtils.getAllInheritedTypes;
-import static org.apache.dubbo.common.utils.ClassUtils.getAllSuperClasses;
+import static org.apache.dubbo.common.utils.MemberUtils.isPrivate;
 import static org.apache.dubbo.common.utils.MemberUtils.isStatic;
 import static org.apache.dubbo.common.utils.ReflectUtils.EMPTY_CLASS_ARRAY;
 import static org.apache.dubbo.common.utils.ReflectUtils.resolveTypes;
 
-public abstract class MethodUtils {
+public interface MethodUtils {
 
-    public static boolean isSetter(Method method) {
+    static boolean isSetter(Method method) {
         return method.getName().startsWith("set")
                 && !"set".equals(method.getName())
                 && Modifier.isPublic(method.getModifiers())
@@ -46,7 +45,7 @@ public abstract class MethodUtils {
                 && ClassUtils.isPrimitive(method.getParameterTypes()[0]);
     }
 
-    public static boolean isGetter(Method method) {
+    static boolean isGetter(Method method) {
         String name = method.getName();
         return (name.startsWith("get") || name.startsWith("is"))
                 && !"get".equals(name) && !"is".equals(name)
@@ -56,7 +55,7 @@ public abstract class MethodUtils {
                 && ClassUtils.isPrimitive(method.getReturnType());
     }
 
-    public static boolean isMetaMethod(Method method) {
+    static boolean isMetaMethod(Method method) {
         String name = method.getName();
         if (!(name.startsWith("get") || name.startsWith("is"))) {
             return false;
@@ -79,32 +78,118 @@ public abstract class MethodUtils {
         return true;
     }
 
-    public static boolean isDeprecated(Method method) {
+    static boolean isDeprecated(Method method) {
         return method.getAnnotation(Deprecated.class) != null;
     }
 
+
     /**
-     * Get all public {@link Method methods} of the specified type hierarchically
+     * Create an instance of {@link Predicate} for {@link Method} to exclude the specified declared class
      *
-     * @param targetType the target type
+     * @param declaredClass the declared class to exclude
+     * @return non-null
+     */
+    static Predicate<Method> excludeDeclaredClass(Class<?> declaredClass) {
+        return method -> !Objects.equals(declaredClass, method.getDeclaringClass());
+    }
+
+    /**
+     * Get all {@link Method methods} of the declared class
+     *
+     * @param declaringClass        the declared class
+     * @param includeInheritedTypes include the inherited types, e,g. super classes or interfaces
+     * @param publicOnly            only public method
+     * @param methodsToFilter       (optional) the methods to be filtered
      * @return non-null read-only {@link List}
      * @since 2.7.6
      */
-    public static List<Method> getAllMethods(Class<?> targetType, Predicate<Method>... methodFilters) {
+    static List<Method> getMethods(Class<?> declaringClass, boolean includeInheritedTypes, boolean publicOnly,
+                                   Predicate<Method>... methodsToFilter) {
 
-        Set<Class<?>> superClasses = getAllSuperClasses(targetType);
-
-        // Add the methods from current type
-        List<Method> allMethods = new LinkedList<>(getMethods(targetType));
-
-        // Add the methods from all super classes
-        for (Class<?> superClass : superClasses) {
-            allMethods.addAll(getMethods(superClass));
+        if (declaringClass == null || declaringClass.isPrimitive()) {
+            return emptyList();
         }
 
-        // make read-only
-        return unmodifiableList(filterAll(allMethods, methodFilters));
+        // All declared classes
+        List<Class<?>> declaredClasses = new LinkedList<>();
+        // Add the top declaring class
+        declaredClasses.add(declaringClass);
+        // If the super classes are resolved, all them into declaredClasses
+        if (includeInheritedTypes) {
+            declaredClasses.addAll(getAllInheritedTypes(declaringClass));
+        }
+
+        // All methods
+        List<Method> allMethods = new LinkedList<>();
+
+        for (Class<?> classToSearch : declaredClasses) {
+            Method[] methods = publicOnly ? classToSearch.getMethods() : classToSearch.getDeclaredMethods();
+            // Add the declared methods or public methods
+            for (Method method : methods) {
+                allMethods.add(method);
+            }
+        }
+
+        return unmodifiableList(filterAll(allMethods, methodsToFilter));
     }
+
+    /**
+     * Get all declared {@link Method methods} of the declared class, excluding the inherited methods
+     *
+     * @param declaringClass  the declared class
+     * @param methodsToFilter (optional) the methods to be filtered
+     * @return non-null read-only {@link List}
+     * @see #getMethods(Class, boolean, boolean, Predicate[])
+     * @since 2.7.6
+     */
+    static List<Method> getDeclaredMethods(Class<?> declaringClass, Predicate<Method>... methodsToFilter) {
+        return getMethods(declaringClass, false, false, methodsToFilter);
+    }
+
+    /**
+     * Get all public {@link Method methods} of the declared class, including the inherited methods.
+     *
+     * @param declaringClass  the declared class
+     * @param methodsToFilter (optional) the methods to be filtered
+     * @return non-null read-only {@link List}
+     * @see #getMethods(Class, boolean, boolean, Predicate[])
+     * @since 2.7.6
+     */
+    static List<Method> getMethods(Class<?> declaringClass, Predicate<Method>... methodsToFilter) {
+        return getMethods(declaringClass, false, true, methodsToFilter);
+    }
+
+    /**
+     * Get all declared {@link Method methods} of the declared class, including the inherited methods.
+     *
+     * @param declaringClass  the declared class
+     * @param methodsToFilter (optional) the methods to be filtered
+     * @return non-null read-only {@link List}
+     * @see #getMethods(Class, boolean, boolean, Predicate[])
+     * @since 2.7.6
+     */
+    static List<Method> getAllDeclaredMethods(Class<?> declaringClass, Predicate<Method>... methodsToFilter) {
+        return getMethods(declaringClass, true, false, methodsToFilter);
+    }
+
+    /**
+     * Get all public {@link Method methods} of the declared class, including the inherited methods.
+     *
+     * @param declaringClass  the declared class
+     * @param methodsToFilter (optional) the methods to be filtered
+     * @return non-null read-only {@link List}
+     * @see #getMethods(Class, boolean, boolean, Predicate[])
+     * @since 2.7.6
+     */
+    static List<Method> getAllMethods(Class<?> declaringClass, Predicate<Method>... methodsToFilter) {
+        return getMethods(declaringClass, true, true, methodsToFilter);
+    }
+
+//    static List<Method> getOverriderMethods(Class<?> implementationClass, Class<?>... superTypes) {
+
+//
+
+//    }
 
     /**
      * Find the {@link Method} by the the specified type and method name without the parameter types
@@ -114,7 +199,7 @@ public abstract class MethodUtils {
      * @return if not found, return <code>null</code>
      * @since 2.7.6
      */
-    public static Method findMethod(Class type, String methodName) {
+    static Method findMethod(Class type, String methodName) {
         return findMethod(type, methodName, EMPTY_CLASS_ARRAY);
     }
 
@@ -127,7 +212,7 @@ public abstract class MethodUtils {
      * @return if not found, return <code>null</code>
      * @since 2.7.6
      */
-    public static Method findMethod(Class type, String methodName, Class<?>... parameterTypes) {
+    static Method findMethod(Class type, String methodName, Class<?>... parameterTypes) {
         Method method = null;
         try {
             method = type.getDeclaredMethod(methodName, parameterTypes);
@@ -146,7 +231,7 @@ public abstract class MethodUtils {
      * @return the target method's execution result
      * @since 2.7.6
      */
-    public static <T> T invokeMethod(Object object, String methodName, Object... methodParameters) {
+    static <T> T invokeMethod(Object object, String methodName, Object... methodParameters) {
         Class type = object.getClass();
         Class[] parameterTypes = resolveTypes(methodParameters);
         Method method = findMethod(type, methodName, parameterTypes);
@@ -167,16 +252,6 @@ public abstract class MethodUtils {
         return value;
     }
 
-    /**
-     * Get all public {@link Method methods} of the specified type
-     *
-     * @param targetType the target type
-     * @return non-null read-only {@link List}
-     * @since 2.7.6
-     */
-    public static List<Method> getMethods(Class<?> targetType) {
-        return asList(targetType.getMethods());
-    }
 
     /**
      * Tests whether one method, as a member of a given type,
@@ -190,7 +265,7 @@ public abstract class MethodUtils {
      * @jls 9.4.1 Inheritance and Overriding
      * @see Elements#overrides(ExecutableElement, ExecutableElement, TypeElement)
      */
-    public static boolean overrides(Method overrider, Method overridden) {
+    static boolean overrides(Method overrider, Method overridden) {
 
         if (overrider == null || overridden == null) {
             return false;
@@ -206,7 +281,10 @@ public abstract class MethodUtils {
             return false;
         }
 
-        // Modifiers comparison: Accessibility will be ignored, trust the compiler verify
+        // Modifiers comparison: the accessibility of any method must not be private
+        if (isPrivate(overrider) || isPrivate(overridden)) {
+            return false;
+        }
 
         // Inheritance comparison: The declaring class of overrider must be inherit from the overridden's
         if (!overridden.getDeclaringClass().isAssignableFrom(overrider.getDeclaringClass())) {
@@ -251,7 +329,7 @@ public abstract class MethodUtils {
      * @param overrider the overrider {@link Method method}
      * @return if found, the overrider <code>method</code>, or <code>null</code>
      */
-    public static Method findNearestOverriddenMethod(Method overrider) {
+    static Method findNearestOverriddenMethod(Method overrider) {
         Class<?> declaringClass = overrider.getDeclaringClass();
         Method overriddenMethod = null;
         for (Class<?> inheritedType : getAllInheritedTypes(declaringClass)) {
@@ -270,7 +348,7 @@ public abstract class MethodUtils {
      * @param declaringClass the class that is declaring the overridden {@link Method method}
      * @return if found, the overrider <code>method</code>, or <code>null</code>
      */
-    public static Method findOverriddenMethod(Method overrider, Class<?> declaringClass) {
+    static Method findOverriddenMethod(Method overrider, Class<?> declaringClass) {
         List<Method> matchedMethods = getAllMethods(declaringClass, method -> overrides(overrider, method));
         return matchedMethods.isEmpty() ? null : matchedMethods.get(0);
     }

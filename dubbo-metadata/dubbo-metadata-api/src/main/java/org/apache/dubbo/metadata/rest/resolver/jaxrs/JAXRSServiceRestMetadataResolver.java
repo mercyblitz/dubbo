@@ -20,10 +20,15 @@ import org.apache.dubbo.metadata.rest.RestMethodMetadata;
 import org.apache.dubbo.metadata.rest.resolver.AbstractServiceRestMetadataResolver;
 import org.apache.dubbo.metadata.rest.resolver.ServiceRestMetadataResolver;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Set;
 
+import static org.apache.dubbo.common.utils.AnnotationUtils.findAnnotation;
+import static org.apache.dubbo.common.utils.AnnotationUtils.findMetaAnnotation;
+import static org.apache.dubbo.common.utils.AnnotationUtils.getValue;
 import static org.apache.dubbo.common.utils.AnnotationUtils.isAnnotationPresent;
+import static org.apache.dubbo.common.utils.HttpUtils.buildPath;
 import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.HTTP_METHOD_ANNOTATION_CLASS_NAME;
 import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.PATH_ANNOTATION_CLASS_NAME;
 
@@ -46,14 +51,28 @@ public class JAXRSServiceRestMetadataResolver extends AbstractServiceRestMetadat
 
     @Override
     protected String resolveRequestMethod(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass) {
-
-
-        return null;
+        Annotation httpMethod = findMetaAnnotation(serviceType, HTTP_METHOD_ANNOTATION_CLASS_NAME);
+        return getValue(httpMethod);
     }
 
     @Override
     protected String resolveRequestPath(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass) {
-        return null;
+        String requestBasePath = resolveRequestPathFromType(serviceType, serviceInterfaceClass);
+        String requestRelativePath = resolveRequestPathFromMethod(serviceMethod);
+        return buildPath(requestBasePath, requestRelativePath);
+    }
+
+    private String resolveRequestPathFromType(Class<?> serviceType, Class<?> serviceInterfaceClass) {
+        Annotation path = findAnnotation(serviceType, PATH_ANNOTATION_CLASS_NAME);
+        if (path == null) {
+            path = findAnnotation(serviceInterfaceClass, PATH_ANNOTATION_CLASS_NAME);
+        }
+        return getValue(path);
+    }
+
+    private String resolveRequestPathFromMethod(Method serviceMethod) {
+        Annotation path = findAnnotation(serviceMethod, PATH_ANNOTATION_CLASS_NAME);
+        return getValue(path);
     }
 
     @Override
