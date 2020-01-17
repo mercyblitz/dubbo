@@ -16,6 +16,11 @@
  */
 package org.apache.dubbo.metadata.tools;
 
+import org.apache.dubbo.metadata.rest.RestService;
+import org.apache.dubbo.metadata.rest.SpringRestService;
+import org.apache.dubbo.metadata.rest.StandardRestService;
+import org.apache.dubbo.metadata.rest.User;
+
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;

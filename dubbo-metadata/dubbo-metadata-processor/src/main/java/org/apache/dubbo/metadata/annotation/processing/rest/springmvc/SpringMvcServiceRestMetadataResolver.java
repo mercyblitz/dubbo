@@ -16,8 +16,8 @@
  */
 package org.apache.dubbo.metadata.annotation.processing.rest.springmvc;
 
-import org.apache.dubbo.metadata.annotation.processing.rest.AbstractServiceRestMetadataProcessor;
-import org.apache.dubbo.metadata.annotation.processing.rest.ServiceRestMetadataProcessor;
+import org.apache.dubbo.metadata.annotation.processing.rest.AbstractServiceRestMetadataResolver;
+import org.apache.dubbo.metadata.annotation.processing.rest.ServiceRestMetadataResolver;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
@@ -44,11 +44,11 @@ import static org.apache.dubbo.metadata.rest.RestMetadataConstants.SPRING_MVC.CO
 import static org.apache.dubbo.metadata.rest.RestMetadataConstants.SPRING_MVC.REQUEST_MAPPING_ANNOTATION_CLASS_NAME;
 
 /**
- * {@link ServiceRestMetadataProcessor}
+ * {@link ServiceRestMetadataResolver}
  *
  * @since 2.7.6
  */
-public class SpringMvcServiceRestMetadataProcessor extends AbstractServiceRestMetadataProcessor {
+public class SpringMvcServiceRestMetadataResolver extends AbstractServiceRestMetadataResolver {
 
     private static final int FIRST_ELEMENT_INDEX = 0;
 
@@ -68,8 +68,8 @@ public class SpringMvcServiceRestMetadataProcessor extends AbstractServiceRestMe
     }
 
     @Override
-    protected String getRequestPath(ProcessingEnvironment processingEnv, TypeElement serviceType,
-                                    ExecutableElement method) {
+    protected String resolveRequestPath(ProcessingEnvironment processingEnv, TypeElement serviceType,
+                                        ExecutableElement method) {
 
         String requestPathFromType = getRequestPath(serviceType);
 
@@ -80,8 +80,8 @@ public class SpringMvcServiceRestMetadataProcessor extends AbstractServiceRestMe
 
 
     @Override
-    protected String getRequestMethod(ProcessingEnvironment processingEnv, TypeElement serviceType,
-                                      ExecutableElement method) {
+    protected String resolveRequestMethod(ProcessingEnvironment processingEnv, TypeElement serviceType,
+                                          ExecutableElement method) {
 
         AnnotationMirror requestMapping = getRequestMapping(method);
 

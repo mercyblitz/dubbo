@@ -53,11 +53,11 @@ import static org.apache.dubbo.metadata.annotation.processing.util.ServiceAnnota
 import static org.apache.dubbo.metadata.annotation.processing.util.ServiceAnnotationUtils.resolveServiceInterfaceName;
 
 /**
- * Abstract {@link ServiceRestMetadataProcessor} implementation
+ * Abstract {@link ServiceRestMetadataResolver} implementation
  *
  * @since 2.7.6
  */
-public abstract class AbstractServiceRestMetadataProcessor implements ServiceRestMetadataProcessor {
+public abstract class AbstractServiceRestMetadataResolver implements ServiceRestMetadataResolver {
 
     private final static ThreadLocal<Map<String, Object>> threadLocalCache = withInitial(HashMap::new);
 
@@ -66,7 +66,7 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
     private final String processorName = getClass().getSimpleName();
 
     @Override
-    public final ServiceRestMetadata process(ProcessingEnvironment processingEnv,
+    public final ServiceRestMetadata resolve(ProcessingEnvironment processingEnv,
                                              TypeElement serviceType,
                                              Set<? extends TypeElement> annotations) {
 
@@ -89,7 +89,7 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
             List<? extends ExecutableElement> serviceMethods = getPublicNonStaticMethods(serviceInterfaceType, Object.class);
 
             serviceMethods.forEach(serviceMethod -> {
-                processRestMethodMetadata(processingEnv, serviceType, serviceInterfaceType, serviceMethod)
+                resolveRestMethodMetadata(processingEnv, serviceType, serviceInterfaceType, serviceMethod)
                         .ifPresent(serviceRestMetadata.getMeta()::add);
             });
 
@@ -102,7 +102,7 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
         return serviceRestMetadata;
     }
 
-    protected Optional<RestMethodMetadata> processRestMethodMetadata(ProcessingEnvironment processingEnv,
+    protected Optional<RestMethodMetadata> resolveRestMethodMetadata(ProcessingEnvironment processingEnv,
                                                                      TypeElement serviceType,
                                                                      TypeElement serviceInterfaceType,
                                                                      ExecutableElement serviceMethod) {
@@ -113,13 +113,13 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
             return empty();
         }
 
-        String requestPath = getRequestPath(processingEnv, serviceType, restCapableMethod); // requestPath is required
+        String requestPath = resolveRequestPath(processingEnv, serviceType, restCapableMethod); // requestPath is required
 
         if (requestPath == null) {
             return empty();
         }
 
-        String requestMethod = getRequestMethod(processingEnv, serviceType, restCapableMethod); // requestMethod is required
+        String requestMethod = resolveRequestMethod(processingEnv, serviceType, restCapableMethod); // requestMethod is required
 
         if (requestMethod == null) {
             return empty();
@@ -127,7 +127,7 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
 
         RestMethodMetadata metadata = new RestMethodMetadata();
 
-        MethodDefinition methodDefinition = getMethodDefinition(processingEnv, serviceType, restCapableMethod);
+        MethodDefinition methodDefinition = resolveMethodDefinition(processingEnv, serviceType, restCapableMethod);
         // Set MethodDefinition
         metadata.setMethod(methodDefinition);
 
@@ -202,14 +202,14 @@ public abstract class AbstractServiceRestMetadataProcessor implements ServiceRes
                                                  ExecutableElement method, RestMethodMetadata metadata) {
     }
 
-    protected abstract String getRequestPath(ProcessingEnvironment processingEnv, TypeElement serviceType,
-                                             ExecutableElement method);
+    protected abstract String resolveRequestPath(ProcessingEnvironment processingEnv, TypeElement serviceType,
+                                                 ExecutableElement method);
 
-    protected abstract String getRequestMethod(ProcessingEnvironment processingEnv, TypeElement serviceType,
-                                               ExecutableElement method);
+    protected abstract String resolveRequestMethod(ProcessingEnvironment processingEnv, TypeElement serviceType,
+                                                   ExecutableElement method);
 
-    protected MethodDefinition getMethodDefinition(ProcessingEnvironment processingEnv, TypeElement serviceType,
-                                                   ExecutableElement method) {
+    protected MethodDefinition resolveMethodDefinition(ProcessingEnvironment processingEnv, TypeElement serviceType,
+                                                       ExecutableElement method) {
         return build(processingEnv, method);
     }
 

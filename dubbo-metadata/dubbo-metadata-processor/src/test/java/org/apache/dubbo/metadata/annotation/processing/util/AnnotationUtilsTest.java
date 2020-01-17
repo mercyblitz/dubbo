@@ -18,13 +18,12 @@ package org.apache.dubbo.metadata.annotation.processing.util;
 
 import org.apache.dubbo.config.annotation.Service;
 import org.apache.dubbo.metadata.annotation.processing.AbstractAnnotationProcessingTest;
-import org.apache.dubbo.metadata.tools.SpringRestService;
+import org.apache.dubbo.metadata.rest.SpringRestService;
 import org.apache.dubbo.metadata.tools.TestService;
 import org.apache.dubbo.metadata.tools.TestServiceImpl;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;

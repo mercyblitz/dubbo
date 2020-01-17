@@ -16,8 +16,8 @@
  */
 package org.apache.dubbo.metadata.annotation.processing.rest.jaxrs;
 
-import org.apache.dubbo.metadata.annotation.processing.rest.AbstractServiceRestMetadataProcessor;
-import org.apache.dubbo.metadata.annotation.processing.rest.ServiceRestMetadataProcessor;
+import org.apache.dubbo.metadata.annotation.processing.rest.AbstractServiceRestMetadataResolver;
+import org.apache.dubbo.metadata.annotation.processing.rest.ServiceRestMetadataResolver;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.AnnotatedConstruct;
@@ -40,11 +40,11 @@ import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.PATH_A
 import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.PRODUCES_ANNOTATION_CLASS_NAME;
 
 /**
- * {@link ServiceRestMetadataProcessor} implementation for JAX-RS 2 and 1
+ * {@link ServiceRestMetadataResolver} implementation for JAX-RS 2 and 1
  *
  * @since 2.7.6
  */
-public class JAXRSServiceRestMetadataProcessor extends AbstractServiceRestMetadataProcessor {
+public class JAXRSServiceRestMetadataResolver extends AbstractServiceRestMetadataResolver {
 
     @Override
     public boolean supports(ProcessingEnvironment processingEnvironment, TypeElement serviceType) {
@@ -63,14 +63,14 @@ public class JAXRSServiceRestMetadataProcessor extends AbstractServiceRestMetada
     }
 
     @Override
-    protected String getRequestPath(ProcessingEnvironment processingEnv, TypeElement serviceType, ExecutableElement method) {
+    protected String resolveRequestPath(ProcessingEnvironment processingEnv, TypeElement serviceType, ExecutableElement method) {
         String pathFromType = getPathValue(processingEnv, serviceType);
         String pathFromMethod = getPathValue(method);
         return buildPath(pathFromType, pathFromMethod);
     }
 
     @Override
-    protected String getRequestMethod(ProcessingEnvironment processingEnv, TypeElement serviceType, ExecutableElement method) {
+    protected String resolveRequestMethod(ProcessingEnvironment processingEnv, TypeElement serviceType, ExecutableElement method) {
         AnnotationMirror annotation = findMetaAnnotation(method, HTTP_METHOD_ANNOTATION_CLASS_NAME);
         return getValue(annotation);
     }

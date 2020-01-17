@@ -17,8 +17,8 @@
 package org.apache.dubbo.metadata.annotation.processing.rest;
 
 import org.apache.dubbo.common.convert.Converter;
-import org.apache.dubbo.metadata.annotation.processing.rest.jaxrs.JAXRSServiceRestMetadataProcessor;
-import org.apache.dubbo.metadata.annotation.processing.rest.springmvc.SpringMvcServiceRestMetadataProcessor;
+import org.apache.dubbo.metadata.annotation.processing.rest.jaxrs.JAXRSServiceRestMetadataResolver;
+import org.apache.dubbo.metadata.annotation.processing.rest.springmvc.SpringMvcServiceRestMetadataResolver;
 
 import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.AnnotationMirror;
@@ -41,11 +41,11 @@ import static org.apache.dubbo.metadata.annotation.processing.util.ServiceAnnota
 import static org.apache.dubbo.metadata.annotation.processing.util.TypeUtils.findInterface;
 
 /**
- * The default implementation of {@link ServiceRestMetadataProcessor}
+ * The default implementation of {@link ServiceRestMetadataResolver}
  *
  * @since 2.7.6
  */
-public class DefaultServiceRestMetadataProcessor extends AbstractServiceRestMetadataProcessor {
+public class DefaultServiceRestMetadataResolver extends AbstractServiceRestMetadataResolver {
 
     private static final char PACKAGE_SEPARATOR = '.';
 
@@ -65,8 +65,8 @@ public class DefaultServiceRestMetadataProcessor extends AbstractServiceRestMeta
 
     @Override
     public boolean supports(ProcessingEnvironment processingEnvironment, TypeElement serviceType) {
-        return !JAXRSServiceRestMetadataProcessor.supports(serviceType) &&
-                !SpringMvcServiceRestMetadataProcessor.supports(serviceType);
+        return !JAXRSServiceRestMetadataResolver.supports(serviceType) &&
+                !SpringMvcServiceRestMetadataResolver.supports(serviceType);
     }
 
     @Override
@@ -77,8 +77,8 @@ public class DefaultServiceRestMetadataProcessor extends AbstractServiceRestMeta
     }
 
     @Override
-    protected String getRequestPath(ProcessingEnvironment processingEnv, TypeElement serviceType,
-                                    ExecutableElement method) {
+    protected String resolveRequestPath(ProcessingEnvironment processingEnv, TypeElement serviceType,
+                                        ExecutableElement method) {
 
         AnnotationMirror serviceAnnotation = getAnnotation(serviceType);
 
@@ -154,8 +154,8 @@ public class DefaultServiceRestMetadataProcessor extends AbstractServiceRestMeta
     }
 
     @Override
-    protected String getRequestMethod(ProcessingEnvironment processingEnv, TypeElement serviceType,
-                                      ExecutableElement method) {
+    protected String resolveRequestMethod(ProcessingEnvironment processingEnv, TypeElement serviceType,
+                                          ExecutableElement method) {
         return HTTP_REQUEST_METHOD;
     }
 

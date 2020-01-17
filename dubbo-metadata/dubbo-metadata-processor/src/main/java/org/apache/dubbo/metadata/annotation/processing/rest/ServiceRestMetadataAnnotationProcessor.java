@@ -40,7 +40,7 @@ import static org.apache.dubbo.metadata.annotation.processing.util.ServiceAnnota
  */
 public class ServiceRestMetadataAnnotationProcessor extends AbstractServiceAnnotationProcessor {
 
-    private Set<ServiceRestMetadataProcessor> metadataProcessors;
+    private Set<ServiceRestMetadataResolver> metadataProcessors;
 
     private ServiceRestMetadataStorage serviceRestMetadataWriter;
 
@@ -49,7 +49,7 @@ public class ServiceRestMetadataAnnotationProcessor extends AbstractServiceAnnot
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        this.metadataProcessors = getExtensionLoader(ServiceRestMetadataProcessor.class).getSupportedExtensionInstances();
+        this.metadataProcessors = getExtensionLoader(ServiceRestMetadataResolver.class).getSupportedExtensionInstances();
         this.serviceRestMetadataWriter = new ServiceRestMetadataStorage(processingEnv);
     }
 
@@ -74,11 +74,11 @@ public class ServiceRestMetadataAnnotationProcessor extends AbstractServiceAnnot
         metadataProcessors
                 .stream()
                 .filter(processor -> supports(processor, processingEnv, serviceType))
-                .map(processor -> processor.process(processingEnv, serviceType, annotations))
+                .map(processor -> processor.resolve(processingEnv, serviceType, annotations))
                 .forEach(serviceRestMetadata::add);
     }
 
-    private boolean supports(ServiceRestMetadataProcessor processor, ProcessingEnvironment processingEnv,
+    private boolean supports(ServiceRestMetadataResolver processor, ProcessingEnvironment processingEnv,
                              TypeElement serviceType) {
         //  @Service must be present in service type
         return isServiceAnnotationPresent(serviceType) && processor.supports(processingEnv, serviceType);

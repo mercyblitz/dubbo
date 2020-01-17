@@ -25,12 +25,12 @@ import javax.lang.model.element.TypeElement;
 import java.util.Set;
 
 /**
- * The class to process {@link ServiceRestMetadata} based on Annotation Processor Tool
+ * The class to resolve {@link ServiceRestMetadata} based on Annotation Processor Tool
  *
  * @since 2.7.6
  */
 @SPI("default")
-public interface ServiceRestMetadataProcessor extends Prioritized {
+public interface ServiceRestMetadataResolver extends Prioritized {
 
     /**
      * Supports or not to the specified service type
@@ -42,14 +42,14 @@ public interface ServiceRestMetadataProcessor extends Prioritized {
     boolean supports(ProcessingEnvironment processingEnvironment, TypeElement serviceType);
 
     /**
-     * Process the {@link ServiceRestMetadata} from given service type
+     * Resolve the {@link ServiceRestMetadata} from given service type
      *
      * @param processingEnvironment {@link ProcessingEnvironment}
      * @param serviceType           Dubbo service type or interface
      * @param annotations
      * @return non-null
      */
-    ServiceRestMetadata process(ProcessingEnvironment processingEnvironment,
+    ServiceRestMetadata resolve(ProcessingEnvironment processingEnvironment,
                                 TypeElement serviceType,
                                 Set<? extends TypeElement> annotations);
 }
