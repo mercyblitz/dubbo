@@ -23,6 +23,15 @@ package org.apache.dubbo.metadata.rest;
  */
 public interface RestMetadataConstants {
 
+    /**
+     * The encoding of metadata
+     */
+    String METADATA_ENCODING = "UTF-8";
+
+    /**
+     * {@link ServiceRestMetadata} Resource PATH
+     */
+    String SERVICE_REST_METADATA_RESOURCE_PATH = "META-INF/dubbo/service-rest-metadata.json";
 
     /**
      * JAX-RS

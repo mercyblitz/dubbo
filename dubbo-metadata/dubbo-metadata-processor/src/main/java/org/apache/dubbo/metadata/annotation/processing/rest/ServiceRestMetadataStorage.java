@@ -28,13 +28,12 @@ import java.util.List;
 import java.util.Set;
 
 import static com.google.gson.reflect.TypeToken.getParameterized;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.SERVICE_REST_METADATA_RESOURCE_PATH;
 
 /**
  * The storage for {@link ServiceRestMetadata}
  */
 public class ServiceRestMetadataStorage {
-
-    public static final String METADATA_RESOURCE_PATH = "META-INF/dubbo/service-rest-metadata.json";
 
     private final ClassPathMetadataStorage storage;
 
@@ -44,7 +43,7 @@ public class ServiceRestMetadataStorage {
 
     public void append(Set<ServiceRestMetadata> serviceRestMetadata) throws IOException {
         Set<ServiceRestMetadata> allServiceRestMetadata = new LinkedHashSet<>();
-        storage.read(METADATA_RESOURCE_PATH, reader -> {
+        storage.read(SERVICE_REST_METADATA_RESOURCE_PATH, reader -> {
             Gson gson = new Gson();
             return (List) gson.fromJson(reader, getParameterized(List.class, ServiceRestMetadata.class).getType());
         }).ifPresent(existedMetadata -> {
@@ -60,7 +59,7 @@ public class ServiceRestMetadataStorage {
         if (serviceRestMetadata.isEmpty()) {
             return;
         }
-        storage.write(() -> new Gson().toJson(serviceRestMetadata), METADATA_RESOURCE_PATH);
+        storage.write(() -> new Gson().toJson(serviceRestMetadata), SERVICE_REST_METADATA_RESOURCE_PATH);
     }
 
 }
