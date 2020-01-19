@@ -16,54 +16,44 @@
  */
 package org.apache.dubbo.metadata.rest;
 
-import org.apache.dubbo.config.annotation.Service;
+import java.lang.reflect.Method;
+import java.util.Set;
 
-import java.util.Map;
 
 /**
- * The default implementation of {@link RestService}
+ * The default implementation {@link ServiceRestMetadataResolver}
  *
  * @since 2.7.6
  */
-@Service(version = "1.0.0", group = "default")
-public class DefaultRestService implements RestService {
+public class DefaultServiceRestMetadataResolver extends AbstractServiceRestMetadataResolver {
 
     @Override
-    public String param(String param) {
+    protected boolean supports0(Class<?> serviceType) {
+        return false;
+    }
+
+    @Override
+    protected boolean isRestCapableMethod(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass) {
+        return false;
+    }
+
+    @Override
+    protected String resolveRequestMethod(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass) {
         return null;
     }
 
     @Override
-    public String params(int a, String b) {
+    protected String resolveRequestPath(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass) {
         return null;
     }
 
     @Override
-    public String headers(String header, String header2, Integer param) {
-        return null;
+    protected void processProduces(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass, Set<String> produces) {
+
     }
 
     @Override
-    public String pathVariables(String path1, String path2, String param) {
-        return null;
-    }
+    protected void processConsumes(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass, Set<String> consumes) {
 
-    @Override
-    public String form(String form) {
-        return null;
-    }
-
-    @Override
-    public User requestBodyMap(Map<String, Object> data, String param) {
-        return null;
-    }
-
-    @Override
-    public Map<String, Object> requestBodyUser(User user) {
-        return null;
-    }
-
-    public User user(User user) {
-        return user;
     }
 }

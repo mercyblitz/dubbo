@@ -88,8 +88,9 @@ public interface MethodUtils {
      *
      * @param declaredClass the declared class to exclude
      * @return non-null
+     * @since 2.7.6
      */
-    static Predicate<Method> excludeDeclaredClass(Class<?> declaredClass) {
+    static Predicate<Method> excludedDeclaredClass(Class<?> declaredClass) {
         return method -> !Objects.equals(declaredClass, method.getDeclaringClass());
     }
 
@@ -273,7 +274,7 @@ public interface MethodUtils {
 
         // equality comparison: If two methods are same
         if (Objects.equals(overrider, overridden)) {
-            return true;
+            return false;
         }
 
         // Modifiers comparison: Any method must be non-static method

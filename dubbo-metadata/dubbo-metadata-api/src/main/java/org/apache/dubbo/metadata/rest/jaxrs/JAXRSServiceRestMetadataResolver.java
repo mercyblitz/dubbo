@@ -14,23 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.metadata.rest.resolver.jaxrs;
+package org.apache.dubbo.metadata.rest.jaxrs;
 
-import org.apache.dubbo.metadata.rest.RestMethodMetadata;
-import org.apache.dubbo.metadata.rest.resolver.AbstractServiceRestMetadataResolver;
-import org.apache.dubbo.metadata.rest.resolver.ServiceRestMetadataResolver;
+import org.apache.dubbo.metadata.rest.AbstractServiceRestMetadataResolver;
+import org.apache.dubbo.metadata.rest.ServiceRestMetadataResolver;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import static org.apache.dubbo.common.utils.AnnotationUtils.findAnnotation;
 import static org.apache.dubbo.common.utils.AnnotationUtils.findMetaAnnotation;
 import static org.apache.dubbo.common.utils.AnnotationUtils.getValue;
 import static org.apache.dubbo.common.utils.AnnotationUtils.isAnnotationPresent;
 import static org.apache.dubbo.common.utils.HttpUtils.buildPath;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.CONSUMES_ANNOTATION_CLASS_NAME;
 import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.HTTP_METHOD_ANNOTATION_CLASS_NAME;
 import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.PATH_ANNOTATION_CLASS_NAME;
+import static org.apache.dubbo.metadata.rest.RestMetadataConstants.JAX_RS.PRODUCES_ANNOTATION_CLASS_NAME;
 
 /**
  * JAX-RS {@link ServiceRestMetadataResolver} implementation
@@ -46,12 +48,12 @@ public class JAXRSServiceRestMetadataResolver extends AbstractServiceRestMetadat
 
     @Override
     protected boolean isRestCapableMethod(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass) {
-        return isAnnotationPresent(serviceType, HTTP_METHOD_ANNOTATION_CLASS_NAME);
+        return isAnnotationPresent(serviceMethod, HTTP_METHOD_ANNOTATION_CLASS_NAME);
     }
 
     @Override
     protected String resolveRequestMethod(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass) {
-        Annotation httpMethod = findMetaAnnotation(serviceType, HTTP_METHOD_ANNOTATION_CLASS_NAME);
+        Annotation httpMethod = findMetaAnnotation(serviceMethod, HTTP_METHOD_ANNOTATION_CLASS_NAME);
         return getValue(httpMethod);
     }
 
@@ -76,17 +78,22 @@ public class JAXRSServiceRestMetadataResolver extends AbstractServiceRestMetadat
     }
 
     @Override
-    protected void processProduces(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass, Set<String> produces) {
-
+    protected void processProduces(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass,
+                                   Set<String> produces) {
+        addAnnotationValues(serviceMethod, PRODUCES_ANNOTATION_CLASS_NAME, produces);
     }
 
     @Override
-    protected void processConsumes(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass, Set<String> consumes) {
-
+    protected void processConsumes(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass,
+                                   Set<String> consumes) {
+        addAnnotationValues(serviceMethod, CONSUMES_ANNOTATION_CLASS_NAME, consumes);
     }
 
-    @Override
-    protected void postProcessRestMethodMetadata(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass, RestMethodMetadata metadata) {
-
+    private void addAnnotationValues(Method serviceMethod, String annotationAttributeName, Set<String> result) {
+        Annotation annotation = findAnnotation(serviceMethod, annotationAttributeName);
+        String[] value = getValue(annotation);
+        if (value != null) {
+            Stream.of(value).forEach(result::add);
+        }
     }
 }

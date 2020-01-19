@@ -16,6 +16,7 @@
  */
 package org.apache.dubbo.metadata.annotation.processing.rest;
 
+import org.apache.dubbo.metadata.annotation.processing.util.ExecutableElementComparator;
 import org.apache.dubbo.metadata.definition.model.MethodDefinition;
 import org.apache.dubbo.metadata.rest.RequestMetadata;
 import org.apache.dubbo.metadata.rest.RestMethodMetadata;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.ThreadLocal.withInitial;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.sort;
 import static java.util.Optional.empty;
 import static java.util.Optional.of;
 import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoader;
@@ -86,7 +88,10 @@ public abstract class AbstractServiceRestMetadataResolver implements ServiceRest
 
             TypeElement serviceInterfaceType = elements.getTypeElement(serviceInterfaceName);
 
-            List<? extends ExecutableElement> serviceMethods = getPublicNonStaticMethods(serviceInterfaceType, Object.class);
+            List<? extends ExecutableElement> serviceMethods = new LinkedList<>(getPublicNonStaticMethods(serviceInterfaceType, Object.class));
+
+            // Sorts
+            sort(serviceMethods, ExecutableElementComparator.INSTANCE);
 
             serviceMethods.forEach(serviceMethod -> {
                 resolveRestMethodMetadata(processingEnv, serviceType, serviceInterfaceType, serviceMethod)

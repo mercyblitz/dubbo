@@ -422,7 +422,8 @@ public interface AnnotationUtils {
         if (isType(annotatedElement)) {
             return isAnnotationPresent((Class) annotatedElement, annotationType);
         } else {
-            return annotatedElement.isAnnotationPresent(annotationType);
+            return annotatedElement.isAnnotationPresent(annotationType) ||
+                    findMetaAnnotation(annotatedElement, annotationType) != null; // to find meta-annotation
         }
     }
 

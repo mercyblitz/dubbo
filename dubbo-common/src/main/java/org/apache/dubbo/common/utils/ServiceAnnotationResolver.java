@@ -23,6 +23,8 @@ import java.lang.annotation.Annotation;
 import static java.lang.String.format;
 import static org.apache.dubbo.common.utils.AnnotationUtils.getAttribute;
 import static org.apache.dubbo.common.utils.ArrayUtils.isNotEmpty;
+import static org.apache.dubbo.common.utils.ClassUtils.isGenericClass;
+import static org.apache.dubbo.common.utils.ClassUtils.resolveClass;
 import static org.apache.dubbo.common.utils.StringUtils.isEmpty;
 
 /**
@@ -69,12 +71,20 @@ public class ServiceAnnotationResolver {
      */
     public String resolveInterfaceClassName() {
 
+        Class interfaceClass = null;
         // first, try to get the value from "interfaceName" attribute
         String interfaceName = resolveAttribute("interfaceName");
 
         if (isEmpty(interfaceName)) { // If not found, try "interfaceClass"
-            Class interfaceClass = resolveAttribute("interfaceClass");
+            interfaceClass = resolveAttribute("interfaceClass");
+        } else {
+            interfaceClass = resolveClass(interfaceName, getClass().getClassLoader());
+        }
+
+        if (isGenericClass(interfaceClass)) {
             interfaceName = interfaceClass.getName();
+        } else {
+            interfaceName = null;
         }
 
         if (isEmpty(interfaceName)) { // If not fund, try to get the first interface from the service type

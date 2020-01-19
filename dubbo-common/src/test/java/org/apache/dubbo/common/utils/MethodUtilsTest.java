@@ -24,7 +24,7 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
-import static org.apache.dubbo.common.utils.MethodUtils.excludeDeclaredClass;
+import static org.apache.dubbo.common.utils.MethodUtils.excludedDeclaredClass;
 import static org.apache.dubbo.common.utils.MethodUtils.findMethod;
 import static org.apache.dubbo.common.utils.MethodUtils.findNearestOverriddenMethod;
 import static org.apache.dubbo.common.utils.MethodUtils.getAllDeclaredMethods;
@@ -39,6 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * {@link MethodUtils} Test
+ */
 public class MethodUtilsTest {
 
     @Test
@@ -99,13 +102,13 @@ public class MethodUtilsTest {
         assertEquals(1, methods.size());
         assertEquals(asList(findMethod(I.class, "execute", int.class, Object.class)), methods);
 
-        methods = getMethods(A.class, excludeDeclaredClass(Object.class));
+        methods = getMethods(A.class, excludedDeclaredClass(Object.class));
         assertEquals(2, methods.size());
         assertTrue(methods.contains(findMethod(A.class, "execute", int.class, Object.class)));
         assertTrue(methods.contains(findMethod(A.class, "execute")));
 
         methods = getMethods(null);
-        assertEquals(emptyList(),methods);
+        assertEquals(emptyList(), methods);
     }
 
     @Test
@@ -132,7 +135,7 @@ public class MethodUtilsTest {
     @Test
     public void testGetAllMethods() {
 
-        List<Method> methods = getAllMethods(A.class, excludeDeclaredClass(Object.class));
+        List<Method> methods = getAllMethods(A.class, excludedDeclaredClass(Object.class));
         assertEquals(4, methods.size());
         assertTrue(methods.contains(findMethod(A.class, "execute", int.class, Object.class)));
         assertTrue(methods.contains(findMethod(A.class, "execute")));
@@ -140,7 +143,7 @@ public class MethodUtilsTest {
         assertTrue(methods.contains(findMethod(DI.class, "execute", int.class, Object.class)));
 
 
-        methods = getAllMethods(B.class, excludeDeclaredClass(Object.class));
+        methods = getAllMethods(B.class, excludedDeclaredClass(Object.class));
         assertEquals(9, methods.size());
         assertTrue(methods.contains(findMethod(B.class, "execute")));
         assertTrue(methods.contains(findMethod(B.class, "execute", int.class, Object.class)));
@@ -163,7 +166,7 @@ public class MethodUtilsTest {
         assertTrue(methods.contains(findMethod(I.class, "execute", int.class, Object.class)));
         assertTrue(methods.contains(findMethod(DI.class, "execute", int.class, Object.class)));
 
-        methods = getAllDeclaredMethods(B.class, excludeDeclaredClass(Object.class));
+        methods = getAllDeclaredMethods(B.class, excludedDeclaredClass(Object.class));
         assertEquals(11, methods.size());
         assertTrue(methods.contains(findMethod(B.class, "execute")));
         assertTrue(methods.contains(findMethod(B.class, "execute", int.class, Object.class)));
@@ -189,7 +192,7 @@ public class MethodUtilsTest {
         assertFalse(overrides(null, null));
 
         // Case : two methods are same
-        assertTrue(overrides(overridden, overridden));
+        assertFalse(overrides(overridden, overridden));
 
         // Case : instance method and static method
         Method staticMethod = findMethod(B.class, "staticMethod");

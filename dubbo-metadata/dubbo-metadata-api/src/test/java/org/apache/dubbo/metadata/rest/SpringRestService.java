@@ -35,7 +35,7 @@ import java.util.Map;
  *
  * @since 2.7.6
  */
-@Service(version = "2.0.0", group = "spring")
+@Service(version = "2.0.0")
 @RestController
 public class SpringRestService implements RestService {
 

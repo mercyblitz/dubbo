@@ -14,29 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.metadata.rest.resolver;
+package org.apache.dubbo.metadata.rest;
 
-import org.apache.dubbo.common.utils.MethodUtils;
+import org.apache.dubbo.common.utils.MethodComparator;
 import org.apache.dubbo.common.utils.ServiceAnnotationResolver;
 import org.apache.dubbo.config.annotation.Service;
 import org.apache.dubbo.metadata.definition.MethodDefinitionBuilder;
 import org.apache.dubbo.metadata.definition.model.MethodDefinition;
-import org.apache.dubbo.metadata.rest.RequestMetadata;
-import org.apache.dubbo.metadata.rest.RestMethodMetadata;
-import org.apache.dubbo.metadata.rest.ServiceRestMetadata;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.sort;
+import static java.util.Collections.unmodifiableMap;
+import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoader;
 import static org.apache.dubbo.common.function.ThrowableFunction.execute;
 import static org.apache.dubbo.common.utils.AnnotationUtils.isAnyAnnotationPresent;
 import static org.apache.dubbo.common.utils.ClassUtils.forName;
 import static org.apache.dubbo.common.utils.ClassUtils.getAllInterfaces;
+import static org.apache.dubbo.common.utils.MethodUtils.excludedDeclaredClass;
 import static org.apache.dubbo.common.utils.MethodUtils.getAllMethods;
+import static org.apache.dubbo.common.utils.MethodUtils.overrides;
 
 /**
  * The abstract {@link ServiceRestMetadataResolver} class to provider some template methods assemble the instance of
@@ -45,6 +53,12 @@ import static org.apache.dubbo.common.utils.MethodUtils.getAllMethods;
  * @since 2.7.6
  */
 public abstract class AbstractServiceRestMetadataResolver implements ServiceRestMetadataResolver {
+
+    private final Map<String, List<AnnotatedMethodParameterProcessor>> parameterProcessorsMap;
+
+    public AbstractServiceRestMetadataResolver() {
+        this.parameterProcessorsMap = loadAnnotatedMethodParameterProcessors();
+    }
 
     @Override
     public final boolean supports(Class<?> serviceType) {
@@ -106,41 +120,48 @@ public abstract class AbstractServiceRestMetadataResolver implements ServiceRest
      * @param serviceType         Dubbo Service interface or type
      */
     protected void processAllRestMethodMetadata(ServiceRestMetadata serviceRestMetadata, Class<?> serviceType) {
-
         Class<?> serviceInterfaceClass = resolveServiceInterfaceClass(serviceRestMetadata, serviceType);
-
-        List<Method> serviceMethods = resolveServiceMethods(serviceType, serviceInterfaceClass);
-
-        for (Method serviceMethod : serviceMethods) {
-            processRestMethodMetadata(serviceMethod, serviceType, serviceInterfaceClass, serviceRestMetadata.getMeta()::add);
+        Map<Method, Method> serviceMethodsMap = resolveServiceMethodsMap(serviceType, serviceInterfaceClass);
+        for (Map.Entry<Method, Method> entry : serviceMethodsMap.entrySet()) {
+            // try the overrider method first
+            Method serviceMethod = entry.getKey();
+            // If failed, it indicates the overrider method does not contain metadata , then try the declared method
+            if (!processRestMethodMetadata(serviceMethod, serviceType, serviceInterfaceClass, serviceRestMetadata.getMeta()::add)) {
+                Method declaredServiceMethod = entry.getValue();
+                processRestMethodMetadata(declaredServiceMethod, serviceType, serviceInterfaceClass,
+                        serviceRestMetadata.getMeta()::add);
+            }
         }
     }
 
     /**
-     * Resolve the service methods around the service interface class
+     * Resolve a map of all public services methods from the specified service type and its interface class, whose key is the
+     * declared method, and the value is the overrider method
      *
      * @param serviceType           the service interface implementation class
      * @param serviceInterfaceClass the service interface class
-     * @return the declared methods in the interface and their overrider methods
+     * @return non-null read-only {@link Map}
      */
-    protected List<Method> resolveServiceMethods(Class<?> serviceType, Class<?> serviceInterfaceClass) {
-        // The service methods declared the interface
-        List<Method> serviceMethods = new LinkedList<>();
-        List<Method> declaredServiceMethods = getAllMethods(serviceInterfaceClass);
-        List<Method> overriderMethods = getAllMethods(serviceType, method -> overrides(method, declaredServiceMethods));
-        // Add the overrider methods first
-        serviceMethods.addAll(overriderMethods);
-        serviceMethods.addAll(declaredServiceMethods);
-        return serviceMethods;
-    }
+    protected Map<Method, Method> resolveServiceMethodsMap(Class<?> serviceType, Class<?> serviceInterfaceClass) {
+        Map<Method, Method> serviceMethodsMap = new LinkedHashMap<>();
+        // exclude the public methods declared in java.lang.Object.class
+        List<Method> declaredServiceMethods = new ArrayList<>(getAllMethods(serviceInterfaceClass, excludedDeclaredClass(Object.class)));
+        List<Method> serviceMethods = new ArrayList<>(getAllMethods(serviceType, excludedDeclaredClass(Object.class)));
 
-    private boolean overrides(Method serviceMethod, List<Method> declaredServiceMethods) {
+        // sort methods
+        sort(declaredServiceMethods, MethodComparator.INSTANCE);
+        sort(serviceMethods, MethodComparator.INSTANCE);
+
         for (Method declaredServiceMethod : declaredServiceMethods) {
-            if (MethodUtils.overrides(serviceMethod, declaredServiceMethod)) {
-                return true;
+            for (Method serviceMethod : serviceMethods) {
+                if (overrides(serviceMethod, declaredServiceMethod)) {
+                    serviceMethodsMap.put(serviceMethod, declaredServiceMethod);
+                    continue;
+                }
             }
         }
-        return false;
+        // make them to be read-only
+        return unmodifiableMap(serviceMethodsMap);
     }
 
     /**
@@ -165,25 +186,26 @@ public abstract class AbstractServiceRestMetadataResolver implements ServiceRest
      * @param serviceType           Dubbo Service interface or type
      * @param serviceInterfaceClass The type of Dubbo Service interface
      * @param metadataToProcess     {@link RestMethodMetadata} to process if present
+     * @return if processed successfully, return <code>true</code>, or <code>false</code>
      */
-    protected void processRestMethodMetadata(Method serviceMethod, Class<?> serviceType,
-                                             Class<?> serviceInterfaceClass,
-                                             Consumer<RestMethodMetadata> metadataToProcess) {
+    protected boolean processRestMethodMetadata(Method serviceMethod, Class<?> serviceType,
+                                                Class<?> serviceInterfaceClass,
+                                                Consumer<RestMethodMetadata> metadataToProcess) {
 
         if (!isRestCapableMethod(serviceMethod, serviceType, serviceInterfaceClass)) {
-            return;
+            return false;
         }
 
         String requestPath = resolveRequestPath(serviceMethod, serviceType, serviceInterfaceClass); // requestPath is required
 
         if (requestPath == null) {
-            return;
+            return false;
         }
 
         String requestMethod = resolveRequestMethod(serviceMethod, serviceType, serviceInterfaceClass); // requestMethod is required
 
         if (requestMethod == null) {
-            return;
+            return false;
         }
 
         RestMethodMetadata metadata = new RestMethodMetadata();
@@ -211,10 +233,12 @@ public abstract class AbstractServiceRestMetadataResolver implements ServiceRest
         request.setConsumes(consumes);
 
         // Post-Process
-        postProcessRestMethodMetadata(serviceMethod, serviceType, serviceInterfaceClass, metadata);
+        postResolveRestMethodMetadata(serviceMethod, serviceType, serviceInterfaceClass, metadata);
 
         // Accept RestMethodMetadata
         metadataToProcess.accept(metadata);
+
+        return true;
     }
 
     /**
@@ -225,7 +249,8 @@ public abstract class AbstractServiceRestMetadataResolver implements ServiceRest
      * @param serviceInterfaceClass The type of Dubbo Service interface
      * @return If capable, return <code>true</code>
      */
-    protected abstract boolean isRestCapableMethod(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass);
+    protected abstract boolean isRestCapableMethod(Method serviceMethod, Class<?> serviceType, Class<?>
+            serviceInterfaceClass);
 
     /**
      * Resolve the request method
@@ -235,7 +260,8 @@ public abstract class AbstractServiceRestMetadataResolver implements ServiceRest
      * @param serviceInterfaceClass The type of Dubbo Service interface
      * @return if can't be resolve, return <code>null</code>
      */
-    protected abstract String resolveRequestMethod(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass);
+    protected abstract String resolveRequestMethod(Method serviceMethod, Class<?> serviceType, Class<?>
+            serviceInterfaceClass);
 
     /**
      * Resolve the request path
@@ -245,7 +271,8 @@ public abstract class AbstractServiceRestMetadataResolver implements ServiceRest
      * @param serviceInterfaceClass The type of Dubbo Service interface
      * @return if can't be resolve, return <code>null</code>
      */
-    protected abstract String resolveRequestPath(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass);
+    protected abstract String resolveRequestPath(Method serviceMethod, Class<?> serviceType, Class<?>
+            serviceInterfaceClass);
 
     /**
      * Resolve the {@link MethodDefinition}
@@ -264,15 +291,49 @@ public abstract class AbstractServiceRestMetadataResolver implements ServiceRest
 
     private void processAnnotatedMethodParameters(Method serviceMethod, Class<?> serviceType,
                                                   Class<?> serviceInterfaceClass, RestMethodMetadata metadata) {
-
+        int paramCount = serviceMethod.getParameterCount();
+        Parameter[] parameters = serviceMethod.getParameters();
+        for (int i = 0; i < paramCount; i++) {
+            Parameter parameter = parameters[i];
+            processAnnotatedMethodParameter(parameter, i, serviceMethod, serviceType, serviceInterfaceClass, metadata);
+        }
     }
 
-    protected abstract void processProduces(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass,
+    private void processAnnotatedMethodParameter(Parameter parameter, int parameterIndex, Method serviceMethod,
+                                                 Class<?> serviceType, Class<?> serviceInterfaceClass,
+                                                 RestMethodMetadata metadata) {
+        Annotation[] annotations = parameter.getAnnotations();
+        for (Annotation annotation : annotations) {
+            String annotationType = annotation.annotationType().getName();
+            parameterProcessorsMap.getOrDefault(annotationType, emptyList())
+                    .forEach(processor -> {
+                        processor.process(annotation, parameter, parameterIndex, serviceMethod, serviceType,
+                                serviceInterfaceClass, metadata);
+                    });
+        }
+    }
+
+    protected abstract void processProduces(Method serviceMethod, Class<?> serviceType, Class<?>
+            serviceInterfaceClass,
                                             Set<String> produces);
 
-    protected abstract void processConsumes(Method serviceMethod, Class<?> serviceType, Class<?> serviceInterfaceClass,
+    protected abstract void processConsumes(Method serviceMethod, Class<?> serviceType, Class<?>
+            serviceInterfaceClass,
                                             Set<String> consumes);
 
-    protected abstract void postProcessRestMethodMetadata(Method serviceMethod, Class<?> serviceType,
-                                                          Class<?> serviceInterfaceClass, RestMethodMetadata metadata);
+    protected void postResolveRestMethodMetadata(Method serviceMethod, Class<?> serviceType,
+                                                 Class<?> serviceInterfaceClass, RestMethodMetadata metadata) {
+    }
+
+    private static Map<String, List<AnnotatedMethodParameterProcessor>> loadAnnotatedMethodParameterProcessors() {
+        Map<String, List<AnnotatedMethodParameterProcessor>> parameterProcessorsMap = new LinkedHashMap<>();
+        getExtensionLoader(AnnotatedMethodParameterProcessor.class)
+                .getSupportedExtensionInstances()
+                .forEach(processor -> {
+                    List<AnnotatedMethodParameterProcessor> processors =
+                            parameterProcessorsMap.computeIfAbsent(processor.getAnnotationType(), k -> new LinkedList<>());
+                    processors.add(processor);
+                });
+        return parameterProcessorsMap;
+    }
 }

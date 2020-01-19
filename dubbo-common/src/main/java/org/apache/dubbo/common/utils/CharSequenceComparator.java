@@ -14,32 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.dubbo.metadata.rest.resolver;
+package org.apache.dubbo.common.utils;
 
-import org.apache.dubbo.metadata.rest.ServiceRestMetadata;
+import java.util.Comparator;
 
 /**
- * The interface to resolve the {@link ServiceRestMetadata REST metadata} from the specified
- * Dubbo Service interface or type.
+ * The {@link Comparator} for {@link CharSequence}
  *
  * @since 2.7.6
  */
-public interface ServiceRestMetadataResolver {
+public class CharSequenceComparator implements Comparator<CharSequence> {
 
-    /**
-     * Support to resolve {@link ServiceRestMetadata REST metadata} or not
-     *
-     * @param serviceType Dubbo Service interface or type
-     * @return If supports, return <code>true</code>, or <code>false</code>
-     */
-    boolean supports(Class<?> serviceType);
+    public final static CharSequenceComparator INSTANCE = new CharSequenceComparator();
 
-    /**
-     * Resolve the {@link ServiceRestMetadata REST metadata} from the specified
-     * Dubbo Service interface or type
-     *
-     * @param serviceType Dubbo Service interface or type
-     * @return
-     */
-    ServiceRestMetadata resolve(Class<?> serviceType);
+    private CharSequenceComparator() {
+    }
+
+    @Override
+    public int compare(CharSequence c1, CharSequence c2) {
+        return c1.toString().compareTo(c2.toString());
+    }
 }

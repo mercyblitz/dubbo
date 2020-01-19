@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toList;
 import static org.apache.dubbo.common.function.Streams.filterAll;
@@ -330,6 +331,10 @@ public class ClassUtils {
      */
     public static Set<Class<?>> getAllInterfaces(Class<?> type, Predicate<Class<?>>... interfaceFilters) {
 
+        if (type == null || type.isPrimitive()) {
+            return emptySet();
+        }
+
         Set<Class<?>> allInterfaces = new LinkedHashSet<>();
 
         Class<?>[] interfaces = type.getInterfaces();
@@ -422,5 +427,16 @@ public class ClassUtils {
         } catch (Throwable ignored) { // Ignored
         }
         return targetClass;
+    }
+
+    /**
+     * Is generic class or not?
+     *
+     * @param type the target type
+     * @return if the target type is not null or <code>void</code> or Void.class, return <code>true</code>, or false
+     * @since 2.7.6
+     */
+    public static boolean isGenericClass(Class<?> type) {
+        return type != null && !void.class.equals(type) && !Void.class.equals(type);
     }
 }

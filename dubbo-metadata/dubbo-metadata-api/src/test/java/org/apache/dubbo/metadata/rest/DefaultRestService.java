@@ -25,7 +25,7 @@ import java.util.Map;
  *
  * @since 2.7.6
  */
-@Service(version = "1.0.0", group = "default")
+@Service(version = "1.0.0")
 public class DefaultRestService implements RestService {
 
     @Override
