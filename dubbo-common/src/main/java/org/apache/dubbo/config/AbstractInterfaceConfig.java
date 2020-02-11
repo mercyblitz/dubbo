@@ -36,7 +36,6 @@ import java.util.Optional;
 
 import static org.apache.dubbo.common.constants.CommonConstants.COMMA_SPLIT_PATTERN;
 import static org.apache.dubbo.common.constants.CommonConstants.DUBBO_VERSION_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.D_REGISTRY_SPLIT_PATTERN;
 import static org.apache.dubbo.common.constants.CommonConstants.INVOKER_LISTENER_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.PID_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.REFERENCE_FILTER_KEY;
@@ -116,7 +115,8 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     protected ModuleConfig module;
 
     /**
-     * Registry centers
+     * The registry list the service will register to
+     * Also see {@link #registryIds}, only one of them will work.
      */
     protected List<RegistryConfig> registries;
 
@@ -125,6 +125,10 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      */
     private List<MethodConfig> methods;
 
+    /**
+     * The id list of registries the service will register to
+     * Also see {@link #registries}, only one of them will work.
+     */
     protected String registryIds;
 
     // connection events
@@ -150,6 +154,9 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
     protected String tag;
 
+    private  Boolean auth;
+
+
     /**
      * The url of the reference service
      */
@@ -171,8 +178,6 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * Check whether the registry config is exists, and then conversion it to {@link RegistryConfig}
      */
     public void checkRegistry() {
-        loadRegistriesFromBackwardConfig();
-
         convertRegistryIdsToRegistries();
 
         for (RegistryConfig registryConfig : registries) {
@@ -238,16 +243,16 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      *                       side, it is the {@link Class} of the remote service interface
      */
     public void checkStubAndLocal(Class<?> interfaceClass) {
-        if (ConfigUtils.isNotEmpty(local)) {
-            Class<?> localClass = ConfigUtils.isDefault(local) ?
-                    ReflectUtils.forName(interfaceClass.getName() + "Local") : ReflectUtils.forName(local);
-            verify(interfaceClass, localClass);
-        }
-        if (ConfigUtils.isNotEmpty(stub)) {
-            Class<?> localClass = ConfigUtils.isDefault(stub) ?
-                    ReflectUtils.forName(interfaceClass.getName() + "Stub") : ReflectUtils.forName(stub);
-            verify(interfaceClass, localClass);
-        }
+        verifyStubAndLocal(local, "Local", interfaceClass);
+        verifyStubAndLocal(stub, "Stub", interfaceClass);
+    }
+    
+    public void verifyStubAndLocal(String className, String label, Class<?> interfaceClass){
+    	if (ConfigUtils.isNotEmpty(className)) {
+                Class<?> localClass = ConfigUtils.isDefault(className) ?
+                        ReflectUtils.forName(interfaceClass.getName() + label) : 			ReflectUtils.forName(className);
+                        verify(interfaceClass, localClass);
+            }
     }
 
     private void verify(Class<?> interfaceClass, Class<?> localClass) {
@@ -280,7 +285,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             }
         } else {
             String[] ids = COMMA_SPLIT_PATTERN.split(registryIds);
-            List<RegistryConfig> tmpRegistries = CollectionUtils.isNotEmpty(registries) ? registries : new ArrayList<>();
+            List<RegistryConfig> tmpRegistries = new ArrayList<>();
             Arrays.stream(ids).forEach(id -> {
                 if (tmpRegistries.stream().noneMatch(reg -> reg.getId().equals(id))) {
                     Optional<RegistryConfig> globalRegistry = ApplicationModel.getConfigManager().getRegistry(id);
@@ -305,29 +310,43 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
     }
 
+    public void completeCompoundConfigs(AbstractInterfaceConfig interfaceConfig) {
+        if (interfaceConfig != null) {
+            if (application == null) {
+                setApplication(interfaceConfig.getApplication());
+            }
+            if (module == null) {
+                setModule(interfaceConfig.getModule());
+            }
+            if (registries == null) {
+                setRegistries(interfaceConfig.getRegistries());
+            }
+            if (monitor == null) {
+                setMonitor(interfaceConfig.getMonitor());
+            }
+        }
+        if (module != null) {
+            if (registries == null) {
+                setRegistries(module.getRegistries());
+            }
+            if (monitor == null) {
+                setMonitor(module.getMonitor());
+            }
+        }
+        if (application != null) {
+            if (registries == null) {
+                setRegistries(application.getRegistries());
+            }
+            if (monitor == null) {
+                setMonitor(application.getMonitor());
+            }
+        }
+    }
+    
     protected void computeValidRegistryIds() {
         if (StringUtils.isEmpty(getRegistryIds())) {
             if (getApplication() != null && StringUtils.isNotEmpty(getApplication().getRegistryIds())) {
                 setRegistryIds(getApplication().getRegistryIds());
-            }
-        }
-    }
-
-    private void loadRegistriesFromBackwardConfig() {
-        // for backward compatibility
-        // -Ddubbo.registry.address is now deprecated.
-        if (registries == null || registries.isEmpty()) {
-            String address = ConfigUtils.getProperty("dubbo.registry.address");
-            if (address != null && address.length() > 0) {
-                List<RegistryConfig> tmpRegistries = new ArrayList<RegistryConfig>();
-                String[] as = D_REGISTRY_SPLIT_PATTERN.split(address);
-                for (String a : as) {
-                    RegistryConfig registryConfig = new RegistryConfig();
-                    registryConfig.setAddress(a);
-                    registryConfig.refresh();
-                    tmpRegistries.add(registryConfig);
-                }
-                setRegistries(tmpRegistries);
             }
         }
     }
@@ -513,6 +532,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         if (monitor != null) {
             return monitor;
         }
+        // FIXME: instead of return null, we should set default monitor when getMonitor() return null in ConfigManager
         return ApplicationModel.getConfigManager().getMonitor().orElse(null);
     }
 
@@ -650,6 +670,14 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
     public void setTag(String tag) {
         this.tag = tag;
+    }
+
+    public Boolean getAuth() {
+        return auth;
+    }
+
+    public void setAuth(Boolean auth) {
+        this.auth = auth;
     }
 
     public SslConfig getSslConfig() {

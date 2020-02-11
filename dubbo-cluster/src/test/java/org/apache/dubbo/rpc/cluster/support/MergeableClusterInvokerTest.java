@@ -28,8 +28,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -145,6 +143,8 @@ public class MergeableClusterInvokerTest {
             }
         });
         given(directory.getUrl()).willReturn(url);
+        given(directory.getConsumerUrl()).willReturn(url);
+        given(directory.getConsumerUrl()).willReturn(url);
         given(directory.getInterface()).willReturn(MenuService.class);
 
         mergeableClusterInvoker = new MergeableClusterInvoker<MenuService>(directory);
@@ -210,6 +210,8 @@ public class MergeableClusterInvokerTest {
             }
         });
         given(directory.getUrl()).willReturn(url);
+        given(directory.getConsumerUrl()).willReturn(url);
+        given(directory.getConsumerUrl()).willReturn(url);
         given(directory.getInterface()).willReturn(MenuService.class);
 
         mergeableClusterInvoker = new MergeableClusterInvoker<MenuService>(directory);

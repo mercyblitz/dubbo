@@ -104,11 +104,6 @@ public class DubboProtocol extends AbstractProtocol {
     private final Map<String, List<ReferenceCountExchangeClient>> referenceClientMap = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Object> locks = new ConcurrentHashMap<>();
     private final Set<String> optimizers = new ConcurrentHashSet<>();
-    /**
-     * consumer side export a stub service for dispatching event
-     * servicekey-stubmethods
-     */
-    private final ConcurrentMap<String, String> stubServiceMethodsMap = new ConcurrentHashMap<>();
 
     private ExchangeHandler requestHandler = new ExchangeHandlerAdapter() {
 
@@ -297,8 +292,6 @@ public class DubboProtocol extends AbstractProtocol {
                             "], has set stubproxy support event ,but no stub methods founded."));
                 }
 
-            } else {
-                stubServiceMethodsMap.put(url.getServiceKey(), stubServiceMethods);
             }
         }
 
@@ -420,7 +413,7 @@ public class DubboProtocol extends AbstractProtocol {
         if (connections == 0) {
             useShareConnect = true;
 
-            /**
+            /*
              * The xml configuration should have a higher priority than properties.
              */
             String shareConnectionsStr = url.getParameter(SHARE_CONNECTIONS_KEY, (String) null);
@@ -487,7 +480,7 @@ public class DubboProtocol extends AbstractProtocol {
                 }
             }
 
-            /**
+            /*
              * I understand that the purpose of the remove operation here is to avoid the expired url key
              * always occupying this memory space.
              */
@@ -636,7 +629,6 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
-        stubServiceMethodsMap.clear();
         super.destroy();
     }
 
@@ -658,7 +650,7 @@ public class DubboProtocol extends AbstractProtocol {
             client.close(ConfigurationUtils.getServerShutdownTimeout());
 
             // TODO
-            /**
+            /*
              * At this time, ReferenceCountExchangeClient#client has been replaced with LazyConnectExchangeClient.
              * Do you need to call client.close again to ensure that LazyConnectExchangeClient is also closed?
              */

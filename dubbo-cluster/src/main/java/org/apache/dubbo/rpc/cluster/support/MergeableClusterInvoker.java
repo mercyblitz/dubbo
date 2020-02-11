@@ -63,7 +63,7 @@ public class MergeableClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @Override
     protected Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         checkInvokers(invokers, invocation);
-        String merger = getUrl().getMethodParameter(invocation.getMethodName(), MERGER_KEY);
+        String merger = getConsumerUrl().getMethodParameter(invocation.getMethodName(), MERGER_KEY);
         if (ConfigUtils.isEmpty(merger)) { // If a method doesn't have a merger, only invoke one Group
             for (final Invoker<T> invoker : invokers) {
                 if (invoker.isAvailable()) {
@@ -133,7 +133,7 @@ public class MergeableClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 method = returnType.getMethod(merger, returnType);
             } catch (NoSuchMethodException e) {
                 throw new RpcException("Can not merge result because missing method [ " + merger + " ] in class [ " +
-                        returnType.getClass().getName() + " ]");
+                        returnType.getName() + " ]");
             }
             if (!Modifier.isPublic(method.getModifiers())) {
                 method.setAccessible(true);

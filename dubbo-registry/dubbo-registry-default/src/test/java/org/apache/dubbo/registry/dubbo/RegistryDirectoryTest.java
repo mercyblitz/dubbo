@@ -34,6 +34,7 @@ import org.apache.dubbo.rpc.cluster.loadbalance.LeastActiveLoadBalance;
 import org.apache.dubbo.rpc.cluster.loadbalance.RoundRobinLoadBalance;
 import org.apache.dubbo.rpc.cluster.router.script.ScriptRouterFactory;
 import org.apache.dubbo.rpc.cluster.support.wrapper.MockClusterInvoker;
+import org.apache.dubbo.rpc.model.ApplicationModel;
 import org.apache.dubbo.rpc.service.GenericService;
 
 import org.junit.jupiter.api.Assertions;
@@ -91,7 +92,7 @@ public class RegistryDirectoryTest {
 
     @BeforeEach
     public void setUp() {
-
+        ApplicationModel.setApplication("RegistryDirectoryTest");
     }
 
     private RegistryDirectory getRegistryDirectory(URL url) {
@@ -144,7 +145,7 @@ public class RegistryDirectoryTest {
         field.setAccessible(true);
         Map<String, String> queryMap = (Map<String, String>) field.get(reg);
         Assertions.assertEquals("bar", queryMap.get("foo"));
-        Assertions.assertEquals(url.clearParameters().addParameter("foo", "bar"), reg.getUrl());
+        Assertions.assertEquals(url.clearParameters().addParameter("foo", "bar"), reg.getConsumerUrl());
     }
 
     @Test
@@ -412,7 +413,7 @@ public class RegistryDirectoryTest {
             serviceUrls.add(SERVICEURL.addParameter(MOCK_KEY, "true"));
             registryDirectory2.notify(serviceUrls);
 
-            Assertions.assertEquals("true", registryDirectory2.getUrl().getParameter("mock"));
+            Assertions.assertEquals("true", registryDirectory2.getConsumerUrl().getParameter("mock"));
         }
     }
 
@@ -782,7 +783,7 @@ public class RegistryDirectoryTest {
         List<URL> durls = new ArrayList<URL>();
         durls.add(SERVICEURL.setHost("10.20.30.140").addParameter("timeout", "1"));
         registryDirectory.notify(durls);
-        Assertions.assertNull(registryDirectory.getUrl().getParameter("mock"));
+        Assertions.assertNull(registryDirectory.getConsumerUrl().getParameter("mock"));
 
         //override
         durls = new ArrayList<URL>();
@@ -791,7 +792,7 @@ public class RegistryDirectoryTest {
         List<Invoker<?>> invokers = registryDirectory.list(invocation);
         Invoker<?> aInvoker = invokers.get(0);
         Assertions.assertEquals("1000", aInvoker.getUrl().getParameter("timeout"));
-        Assertions.assertEquals("fail", registryDirectory.getUrl().getParameter("mock"));
+        Assertions.assertEquals("fail", registryDirectory.getConsumerUrl().getParameter("mock"));
 
         //override clean
         durls = new ArrayList<URL>();
@@ -802,7 +803,7 @@ public class RegistryDirectoryTest {
         //Need to be restored to the original providerUrl
         Assertions.assertEquals("1", aInvoker.getUrl().getParameter("timeout"));
 
-        Assertions.assertNull(registryDirectory.getUrl().getParameter("mock"));
+        Assertions.assertNull(registryDirectory.getConsumerUrl().getParameter("mock"));
     }
 
     /**

@@ -130,7 +130,7 @@ public class InvokerTelnetHandlerTest {
 
         registerProvider(DemoService.class.getName(), new DemoServiceImpl(), DemoService.class);
 
-        String result = invoke.telnet(mockChannel, "getPerson({\"name\":\"zhangsan\",\"age\":12,\"class\":\"org.apache.dubbo.rpc.protocol.dubbo.support.Person\"})");
+        String result = invoke.telnet(mockChannel, "getPerson({\"name\":\"zhangsan\",\"age\":12,\"class\":\"org.apache.dubbo.qos.legacy.service.Person\"})");
         assertTrue(result.contains("result: 12"));
     }
 
@@ -149,6 +149,8 @@ public class InvokerTelnetHandlerTest {
         assertTrue(result.contains("Please use the select command to select the method you want to invoke. eg: select 1"));
         result = select.telnet(mockChannel, "1");
         //result dependent on method order.
+        assertTrue(result.contains("result: 8") || result.contains("result: \"Dubbo\""));
+        result = select.telnet(mockChannel, "2");
         assertTrue(result.contains("result: 8") || result.contains("result: \"Dubbo\""));
     }
 
