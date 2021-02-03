@@ -1,4 +1,4 @@
-package org.apache.dubbo.registry.nacos;/*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -14,6 +14,7 @@ package org.apache.dubbo.registry.nacos;/*
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.dubbo.registry.nacos;
 
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.function.ThrowableFunction;
@@ -29,7 +30,6 @@ import com.alibaba.nacos.api.naming.listener.NamingEvent;
 import com.alibaba.nacos.api.naming.pojo.Instance;
 import com.alibaba.nacos.api.naming.pojo.ListView;
 
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -54,10 +54,13 @@ public class NacosServiceDiscovery implements ServiceDiscovery {
 
     private NamingService namingService;
 
+    private URL registryURL;
+
     @Override
     public void initialize(URL registryURL) throws Exception {
         this.namingService = createNamingService(registryURL);
         this.group = getGroup(registryURL);
+        this.registryURL = registryURL;
     }
 
     @Override
@@ -109,7 +112,7 @@ public class NacosServiceDiscovery implements ServiceDiscovery {
     public void addServiceInstancesChangedListener(ServiceInstancesChangedListener listener)
             throws NullPointerException, IllegalArgumentException {
         execute(namingService, service -> {
-            service.subscribe(listener.getServiceName(), e -> { // Register Nacos EventListener
+            service.subscribe(listener.getServiceNames(), e -> { // Register Nacos EventListener
                 if (e instanceof NamingEvent) {
                     NamingEvent event = (NamingEvent) e;
                     handleEvent(event, listener);
@@ -118,9 +121,14 @@ public class NacosServiceDiscovery implements ServiceDiscovery {
         });
     }
 
+    @Override
+    public URL getUrl() {
+        return registryURL;
+    }
+
     private void handleEvent(NamingEvent event, ServiceInstancesChangedListener listener) {
         String serviceName = event.getServiceName();
-        Collection<ServiceInstance> serviceInstances = event.getInstances()
+        List<ServiceInstance> serviceInstances = event.getInstances()
                 .stream()
                 .map(NacosNamingServiceUtils::toServiceInstance)
                 .collect(Collectors.toList());

@@ -12,12 +12,12 @@ pipeline {
     }
 
     environment {
-        JAVA_HOME = "${tool 'JDK 1.8 (latest)'}"
+        JAVA_HOME = "${tool 'jdk_1.8_latest'}"
     }
 
     tools {
-        maven 'Maven 3 (latest)'
-        jdk 'JDK 1.8 (latest)'
+        maven 'maven_3_latest'
+        jdk 'jdk_1.8_latest'
     }
 
     triggers {
@@ -106,9 +106,9 @@ pipeline {
                 }
             }
             steps {
-                timeout(35) {
+                timeout(40) {
                     sh './mvnw --version'
-                    sh './mvnw clean package deploy -pl dubbo-dependencies-bom && ./mvnw clean package deploy -DskipTests=true'
+                    sh './mvnw clean package deploy -pl dubbo-dependencies-bom && ./mvnw clean source:jar javadoc:jar package deploy -DskipTests=true'
                 }
             }
         }
